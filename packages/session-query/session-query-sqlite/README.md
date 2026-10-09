@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this package to add ranked search across session history, either across sessions or within one session, with cursor pagination. It indexes live and persisted history in a separate derived database, so searches reflect current state without modifying the session-persistence store. Exact reads, filters, and traces remain available through the same query API. Search is opt-in in shipped compositions; configure `openAt` to open the index at startup, on first search, or never. Requests default to FTS5 token and phrase matching; `mode: 'literal'` selects substring scanning over the same documents. Each index path has a single process owner.
+Use this package to add ranked SQLite FTS5 search across session history, either across sessions or within one session, with cursor pagination. It indexes live and persisted history in a separate derived database, so searches reflect current state without modifying the session-persistence store. Exact reads, filters, and traces remain available through the same query API. Search is opt-in in shipped compositions; configure `openAt` to open the index at startup, on first search, or never. Results match tokens and phrases rather than arbitrary substrings, and each index path has a single process owner.
 
 ## Table of Contents
 
@@ -56,13 +56,11 @@ The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-a
 
 ### Search behavior
 
-`searchSessions` searches the whole corpus and groups results by each session's strongest matching event; `searchEvents` searches one logical session. Both accept `mode: 'phrase' | 'literal'`, defaulting to `phrase`. Queries are trimmed and whitespace-normalized; FTS or regular-expression syntax never executes. Metadata filters (session id, cwd, created-at, parent, availability, event seq/time/type/surface) narrow results before ranking. All `current`, `shadowed`, and `log-only` events are searchable by default; pass a surface filter to narrow.
+`searchSessions` searches the whole corpus and groups results by each session's strongest matching event; `searchEvents` searches one logical session. Queries are literal phrases: they are trimmed and whitespace-normalized, and FTS5 syntax such as quotes, `OR`, `NEAR`, and `*` is treated as data, never as executable query syntax. Metadata filters (session id, cwd, created-at, parent, availability, event seq/time/type/surface) narrow results before ranking. All `current`, `shadowed`, and `log-only` events are searchable by default; pass a surface filter to narrow.
 
-Ranking is deterministic: more matching spans first, then shorter documents, with event time, session id, and seq breaking ties. Phrase mode uses FTS5 highlight spans; literal mode counts non-overlapping substring matches in original text. Results carry plain-text snippets around actual matches, bounded by `snippetChars` Unicode code points, with no provider-specific numeric score. Pages continue through an opaque `SessionSearchCursor` bound to the normalized query, mode, filters, and limit; omitted mode equals explicit `phrase`, while crossing modes rejects the cursor. A cursor becomes stale when its relevant corpus changes (`SESSION_QUERY_STALE_CURSOR`); a within-session cursor survives unrelated-session changes while a cross-session cursor does not.
+Ranking is deterministic: more actual FTS5 highlighted-match spans first, then shorter documents, with event time, session id, and seq breaking ties. Results carry plain-text snippets bounded by `snippetChars` Unicode code points, with no provider-specific numeric score. Pages continue through an opaque `SessionSearchCursor` bound to the exact normalized request; a cursor becomes stale when its relevant corpus changes (`SESSION_QUERY_STALE_CURSOR`), and a within-session cursor survives changes to unrelated sessions while a cross-session cursor does not.
 
-Phrase mode keeps the `unicode61` tokenizer: `AI` does not match `BRAID`, and `失效` does not match a larger token such as `缓存失效测试`. Literal mode uses the same Unicode case-insensitive, whitespace-flexible matcher as `ctx.sessionQuery.filterEvents()` with a `text` clause. It supports one-character queries, preserves punctuation as literal data, and matches `失效` within that Chinese text or `AI` within `BRAID`. It does not remove accents, normalize equivalent Unicode spellings, segment words, or expand synonyms; `CAFÉ` matches `café`, but `cafe` does not.
-
-Literal mode scans the existing derived document text, without another index or repeated reads of unchanged persisted logs. It shares reconciliation, live precedence, filtering, pagination, and opening policy with phrase mode. Large archives cost more CPU per query; synchronous SQLite statements cannot be interrupted midway, so cancellation is checked around execution.
+The `unicode61` tokenizer matches tokens and phrases, not arbitrary substrings: `AI` does not match the token `BRAID`. Use `ctx.sessionQuery.filterEvents()` with a `text` clause when a literal whitespace-flexible substring scan is required.
 
 ### When to defer or disable search
 
@@ -144,7 +142,7 @@ These limits define when this package is a poor fit or needs special operational
 
 - **No caller authorization** — this is a trusted context-wide service; a model tool or UI must enforce its own access policy.
 - **Synchronous query execution** — `DatabaseSync` blocks the JavaScript thread during MATCH execution and cannot interrupt a statement already running.
-- **Substring scan cost** — phrase mode uses token lookup; literal mode scans derived documents and can block the Host longer on large archives. It creates no substring index.
+- **Token recall, not arbitrary substrings** — the `unicode61` tokenizer does not match substrings inside a larger token; use `filterEvents()` for literal scans.
 - **Single-owner derived index** — one service in one process must own each index path; external writers and multi-process sharing are unsupported.
 
 <a id="dev-note"></a>

@@ -45,3 +45,17 @@ export interface TreeNode {
 export interface TreeSnapshot {
   readonly nodes: readonly TreeNode[]
 }
+
+/** One ordinary, list-visible Session with matching current message text. */
+export interface TreeSearchItem {
+  readonly sessionId: SessionId
+  /** Bounded plain text around a match in the latest matching message. */
+  readonly snippet: string
+}
+
+/** Newest-first conversation matches; message text is retained only for this request. */
+export interface TreeSearchResult {
+  readonly items: TreeSearchItem[]
+  /** Another matching conversation exists beyond the configured result limit. */
+  readonly hasMore: boolean
+}

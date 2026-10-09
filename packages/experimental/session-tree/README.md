@@ -25,7 +25,7 @@ Browse native conversations and their parent links as a persistent tree, with on
 <a id="use-this-package"></a>
 ## Use this package
 
-Build the checkout, then launch the ordinary web application with the [opt-in overlay](cordis.source.patch.yml):
+Install the [conversation map bundle](../session-tree-bundle/README.md#use-this-package) for one managed switch. For source development, build the checkout and use this alternative [opt-in overlay](cordis.source.patch.yml):
 
 ```bash
 pnpm run build
@@ -34,7 +34,7 @@ pnpm dsh web --patch ./packages/experimental/session-tree/cordis.source.patch.ym
 
 Select **Conversation map** in the sidebar. The [canvas package](../client-ui-session-tree/README.md) describes navigation and result previews. Existing ordinary sessions appear automatically, including native forks created before this plugin was enabled. Use the normal Models settings to select a provider for real conversations.
 
-The overlay also enables native message search: it sets `session-query-sqlite` to `path: ':memory:'` and `openAt: first-search`, opening the derived index on the first query. Ordinary Web profiles leave full-text search disabled. Custom compositions must enable the native index for message search; if it is disabled or fails, the map reports that failure and still shows matching names and summaries.
+Message search reads native Session observations and reuses their public semantic-text helpers. It supports case-insensitive literal fragments, including Chinese single characters, without enabling or replacing the native SQLite search index. It searches current user/assistant messages in ordinary Sessions with workspace metadata, across workspaces. Results follow the native newest-first listing, with a snippet from each Session's latest matching message. A read failure is reported while matching names and summaries remain available.
 
 Open a card to continue its existing native conversation. To explore another direction, use the native conversation's branch action: its new Session inherits an exact event prefix and preserves the parent log. Returning to a Session does not create a branch. Native pinning keeps useful conversations accessible; the tree requires no main-line designation.
 
@@ -48,7 +48,7 @@ Each conversation has one native title across chat, sidebar, and map. Editing it
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The [service](src/index.ts) reads cold or live conversations through Session Query. Its Remote API exposes tree reads and an annotation save that delegates renaming to Session Controller, flushes the native title, and saves the summary. Session commands and full conversation rendering stay with native services. The [domain](src/spec.ts) stores summaries only. The [preview projection](src/preview.ts) extracts append-origin message text, native file declarations, Git-looking output, GitHub references, and Mermaid source. It excludes inherited events from each card's results and summary. Generated typed Remotes connect the browser to these read models.
+The [service](src/index.ts) reads cold or live conversations through Session Query. Its Remote API exposes tree reads, cancellable message search, and an annotation save that delegates renaming to Session Controller, flushes the native title, and saves the summary. Session commands and full conversation rendering stay with native services. The [domain](src/spec.ts) stores summaries only. The [preview projection](src/preview.ts) extracts append-origin message text, native file declarations, Git-looking output, GitHub references, and Mermaid source. It excludes inherited events from each card's results and summary. Generated typed Remotes connect the browser to these read models.
 
 Card previews are cached in memory. A live card requires the same Session instance and event cursor; a cold card requires the same persistence instance and current durable revision. Changed sources are read again, and sources without a usable revision are never reused. Annotation and running-state reads remain fresh independently of the cache. Refresh cancellation stops pending reads; unloading waits for operations before closing annotation storage. Cache entries retain previews rather than full logs and are removed when a Session leaves the listing.
 
@@ -91,6 +91,7 @@ Identical prefixes preserve the opportunity for provider-side prefix reuse. Cach
 
 The experiment keeps storage and preview behavior explicit:
 
+- Each content search reads native logs on demand, with configurable result and snippet limits and cancellation between sessions. It retains no persistent search index.
 - The first listing reads every ordinary Session's log; large archives can load slowly. Later listings validate cached previews against live cursors or lightweight persistence revisions. The canvas is not virtualized.
 - A native fork copies its prefix, so disk usage grows with branch count and prefix length. Independent sessions share the configured filesystem workspace; forks do not create Git worktrees.
 - Commit, pull-request, link, and Mermaid previews are text references, not verified external results. A Git-looking line in non-error tool output does not prove a commit exists. Native conversation rendering remains the place to inspect the source.

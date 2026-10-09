@@ -11,7 +11,7 @@ const MODEL = 'scripted-demo'
 
 class DemoAdapter extends LlmAdapter {
   override providerInfo(provider: string) { return { id: provider, name: 'Session Tree · scripted demo' } }
-  override listModels() { return Promise.resolve([{ id: MODEL, name: '脚本演示 · 无外部模型调用' }]) }
+  override listModels(provider: string) { return Promise.resolve([{ provider, id: MODEL, name: '脚本演示 · 无外部模型调用' }]) }
   override async * stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
     options.signal?.throwIfAborted()
     const last = options.messages.findLast(message => message.role === 'user' && message.source?.kind === 'user')

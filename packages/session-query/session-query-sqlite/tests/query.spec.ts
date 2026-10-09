@@ -4,7 +4,6 @@ import { SessionSearchCursor, type SessionQueryErrorCode } from '@deepseek-ai/ds
 import {
   buildEventWhere,
   buildSessionWhere,
-  createLiteralHighlighter,
   FTS_HIGHLIGHT_END,
   FTS_HIGHLIGHT_START,
   makeSnippet,
@@ -28,21 +27,18 @@ describe('SQLite search request normalization', () => {
   it('normalizes both scopes, defaults arrays and limits, and preserves cursors', () => {
     expect(normalizeSessionRequest({ query: '  alpha\n beta  ' }, limits)).toEqual({
       query: 'alpha beta',
-      mode: 'phrase',
       sessionFilters: [],
       eventFilters: [],
       limit: 2,
     })
     expect(normalizeSessionRequest({
       query: 'needle',
-      mode: 'phrase',
       sessionFilters: [{ kind: 'availability', values: ['live'] }],
       eventFilters: [{ kind: 'surface', values: ['current'] }],
       limit: 3,
       cursor: SessionSearchCursor('next'),
     }, limits)).toEqual({
       query: 'needle',
-      mode: 'phrase',
       sessionFilters: [{ kind: 'availability', values: ['live'] }],
       eventFilters: [{ kind: 'surface', values: ['current'] }],
       limit: 3,
@@ -51,20 +47,17 @@ describe('SQLite search request normalization', () => {
     expect(normalizeEventRequest({ sessionId: SessionId('s'), query: 'needle' }, limits)).toEqual({
       sessionId: SessionId('s'),
       query: 'needle',
-      mode: 'phrase',
       filters: [],
       limit: 2,
     })
     expect(normalizeEventRequest({
       sessionId: SessionId('s'),
       query: 'needle',
-      mode: 'phrase',
       filters: [{ kind: 'seq', from: 1 }],
       cursor: SessionSearchCursor('next'),
     }, limits)).toEqual({
       sessionId: SessionId('s'),
       query: 'needle',
-      mode: 'phrase',
       filters: [{ kind: 'seq', from: 1 }],
       limit: 2,
       cursor: SessionSearchCursor('next'),
@@ -114,19 +107,6 @@ describe('SQLite search request normalization', () => {
     values[0] = 'persisted'
     request.sessionFilters.push({ kind: 'availability', values: ['persisted'] })
     expect(normalized.sessionFilters).toEqual([{ kind: 'availability', values: ['live'] }])
-  })
-
-  it('defaults to phrase matching and separates literal cursor identities', () => {
-    const phrase = normalizeSessionRequest({ query: '递归分支' }, limits)
-    expect(phrase).toEqual(normalizeSessionRequest({ query: '递归分支', mode: 'phrase' }, limits))
-    const literal = normalizeSessionRequest({ query: '递归分支', mode: 'literal' }, limits)
-    expect(literal.mode).toBe('literal')
-    expect(requestFingerprint(literal)).not.toBe(requestFingerprint(phrase))
-    const event = normalizeEventRequest({ sessionId: SessionId('s'), query: '失效', mode: 'literal' }, limits)
-    expect(event.mode).toBe('literal')
-    expect(requestFingerprint(event)).not.toBe(requestFingerprint({ ...event, mode: 'phrase' }))
-    expect(() => normalizeSessionRequest({ query: 'word', mode: 'regex' as never }, limits))
-      .toThrow(expectCode('SESSION_QUERY_INVALID_QUERY'))
   })
 })
 
@@ -223,20 +203,6 @@ describe('SQLite search predicate compilation', () => {
 })
 
 describe('SQLite query identity and presentation', () => {
-  it('marks literal Unicode substrings and punctuation without changing source text', () => {
-    const mark = (text: string) => `${FTS_HIGHLIGHT_START}${text}${FTS_HIGHLIGHT_END}`
-    const search = createLiteralHighlighter('失效')
-    expect(search('进一步验证缓存失效测试')).toBe(`进一步验证缓存${mark('失效')}测试`)
-    expect(search('失效失效')).toBe(`${mark('失效')}${mark('失效')}`)
-    expect(search('命中')).toBeNull()
-    expect(createLiteralHighlighter('aI')('BRAID')).toBe(`BR${mark('AI')}D`)
-    expect(createLiteralHighlighter('Café')('CAFÉ')).toBe(mark('CAFÉ'))
-    expect(createLiteralHighlighter('cafe')('café')).toBeNull()
-    expect(createLiteralHighlighter('OR * [B]')('x OR\n*\t[B] y')).toBe(`x ${mark('OR\n*\t[B]')} y`)
-    expect(createLiteralHighlighter('"B"')('B')).toBeNull()
-    expect(createLiteralHighlighter('哈哈')('哈哈哈')).toBe(`${mark('哈哈')}哈`)
-  })
-
   it('quotes all caller MATCH syntax as data', () => {
     expect(quoteFtsData('say "needle" OR *')).toBe('"say ""needle"" OR *"')
   })
@@ -244,7 +210,6 @@ describe('SQLite query identity and presentation', () => {
   it('canonicalizes request and filter ordering in both scopes', () => {
     const sessionA: NormalizedSessionRequest = {
       query: 'needle',
-      mode: 'phrase',
       limit: 2,
       sessionFilters: [
         { kind: 'cwd', values: ['/b', '/a'] },
@@ -256,7 +221,6 @@ describe('SQLite query identity and presentation', () => {
     }
     const sessionB: NormalizedSessionRequest = {
       query: 'needle',
-      mode: 'phrase',
       limit: 2,
       sessionFilters: [
         { kind: 'created-at', from: 1 },
@@ -271,14 +235,12 @@ describe('SQLite query identity and presentation', () => {
     const eventA: NormalizedEventRequest = {
       sessionId: SessionId('s'),
       query: 'needle',
-      mode: 'phrase',
       limit: 2,
       filters: [{ kind: 'seq' }, { kind: 'surface', values: ['shadowed', 'current'] }],
     }
     const eventB: NormalizedEventRequest = {
       sessionId: SessionId('s'),
       query: 'needle',
-      mode: 'phrase',
       limit: 2,
       filters: [{ kind: 'surface', values: ['current', 'shadowed'] }, { kind: 'seq' }],
     }

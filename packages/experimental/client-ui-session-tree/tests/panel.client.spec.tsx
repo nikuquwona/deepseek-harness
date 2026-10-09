@@ -85,7 +85,7 @@ it('keeps failed annotation edits and uses native conversation navigation for re
   expect(value.create).not.toHaveBeenCalled()
 })
 
-it('finds message content through native search and makes the selected card readable', async () => {
+it('finds message content through plugin search and makes the selected card readable', async () => {
   const value = fixture()
   value.search.mockResolvedValueOnce({ items: [{ sessionId: id('other'), snippet: 'We discussed cache invalidation here.' }], hasMore: false })
   act(() => { value.view.actions.viewport(0,0,0.22) })

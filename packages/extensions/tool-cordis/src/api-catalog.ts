@@ -2521,6 +2521,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'a forest whose parent ids always come from native Session headers.',
       },
       {
+        signature: '@Remote search(query: string, signal: AbortSignal): Promise<TreeSearchResult>',
+        description: 'Scan current messages through public native observations without opening a search index. Only ordinary Sessions visible in the native conversation list are read. Results follow the native newest-first listing and contain no full transcript or persistent search data.',
+        parameters: [{ name: 'query', description: 'non-blank literal text, at most 500 UTF-16 code units after trimming.' }, { name: 'signal', description: 'cancellation for a superseded query or cold Session read.' }],
+        returns: 'bounded conversation matches and whether further matches exist.',
+      },
+      {
         signature: '@Remote annotate(sessionId: SessionId, title: string, summary: string): Promise<TreeAnnotation>',
         description: 'Rename the native Session and save its card summary without issuing a model request.',
         parameters: [{ name: 'sessionId', description: 'an existing native Session.' }, { name: 'title', description: 'required native title, normalized by the Session Controller.' }, { name: 'summary', description: 'custom summary; empty selects the automatic excerpt.' }],
@@ -6713,7 +6719,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SessionEventSearchRequest',
-    declaration: 'export interface SessionEventSearchRequest {\n    sessionId: SessionId;\n    query: string;\n    mode?: SessionSearchMode;\n    filters?: readonly SessionEventMetadataFilter[];\n    limit?: number;\n    cursor?: SessionSearchCursor;\n}',
+    declaration: 'export interface SessionEventSearchRequest {\n    sessionId: SessionId;\n    query: string;\n    filters?: readonly SessionEventMetadataFilter[];\n    limit?: number;\n    cursor?: SessionSearchCursor;\n}',
   },
   {
     name: 'SessionEventSurface',
@@ -7002,10 +7008,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SessionSearchItem',
     declaration: 'export interface SessionSearchItem {\n    readonly sessionId: SessionId;\n    readonly snippet: string;\n}',
-  },
-  {
-    name: 'SessionSearchMode',
-    declaration: 'export type SessionSearchMode = \'phrase\' | \'literal\';',
   },
   {
     name: 'SessionSearchPage',
@@ -7946,6 +7948,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'TreeNode',
     declaration: 'export interface TreeNode {\n    readonly sessionId: SessionId;\n    readonly parentId: SessionId | null;\n    readonly forkSeq: number | null;\n    readonly createdAt: number;\n    readonly title: string;\n    readonly summary: string;\n    readonly customSummary: string;\n    readonly messageCount: number;\n    readonly inheritedEventCount: number;\n    readonly lastSeq: number | null;\n    readonly running: boolean;\n    readonly artifacts: readonly TreeArtifact[];\n}',
+  },
+  {
+    name: 'TreeSearchItem',
+    declaration: 'export interface TreeSearchItem {\n    readonly sessionId: SessionId;\n    readonly snippet: string;\n}',
+  },
+  {
+    name: 'TreeSearchResult',
+    declaration: 'export interface TreeSearchResult {\n    readonly items: TreeSearchItem[];\n    readonly hasMore: boolean;\n}',
   },
   {
     name: 'TreeSnapshot',

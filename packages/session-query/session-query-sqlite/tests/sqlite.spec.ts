@@ -1,6 +1,6 @@
 import { createAssistantMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { ContextFormed } from '@deepseek-ai/dsh-llm'
-import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context, type Fiber } from '@deepseek-ai/cordis'
 import { DatabaseSync } from 'node:sqlite'
 import { chmod, mkdtemp, rm, stat, writeFile } from 'node:fs/promises'
@@ -212,98 +212,6 @@ async function liveContext(config: ConstructorParameters<typeof SqliteSessionQue
 }
 
 describe('SQLite session search', () => {
-  it('finds ordinary Chinese message substrings and short queries in live and cold documents', async () => {
-    TestPersistence.reset([{ meta: header('cold'), events: messageEvents(`${'😀'.repeat(30)}评审递归分支 A：进一步验证缓存失效测试`) }])
-    const ctx = await liveContext({ path: ':memory:', snippetChars: 18 })
-    onTestFinished(() => ctx.fiber.dispose())
-    await ctx.plugin(TestPersistence)
-    const live = ctx.sessions.create(SessionId('live'), {
-      seed: messageEvents('评审递归分支 B：进一步验证缓存失效测试'), meta: { cwd: '/work' },
-    })
-    for (const query of ['递归分支', '失效', '效']) {
-      const found = await ctx.sessionQuery.searchSessions({ query, mode: 'literal' })
-      expect(found.items.map(item => item.header.id).sort()).toEqual([SessionId('cold'), live.id])
-      for (const item of found.items) {
-        expect(item.bestMatch.snippet).toContain(query)
-        expect(Array.from(item.bestMatch.snippet).length).toBeLessThanOrEqual(18)
-        expect(item.bestMatch.snippet).not.toMatch(/[\uFDD0\uFDD1]/u)
-      }
-      await expect(ctx.sessionQuery.searchSessions({ query })).resolves.toEqual({ items: [] })
-      const within = await ctx.sessionQuery.searchEvents({ sessionId: live.id, query, mode: 'literal' })
-      expect(within.items).toHaveLength(1)
-      expect(within.items[0]?.snippet).toContain(query)
-    }
-    expect(TestPersistence.reads.get(SessionId('cold'))).toBe(1)
-    await expect(ctx.sessionQuery.searchSessions({ query: '评审递归分支' }))
-      .resolves.toMatchObject({ items: [expect.anything(), expect.anything()] })
-  })
-
-  it('matches literal case, whitespace and punctuation without widening phrase search', async () => {
-    const ctx = await liveContext()
-    onTestFinished(() => ctx.fiber.dispose())
-    const session = ctx.sessions.create(SessionId('literal'), {
-      seed: messageEvents('BRAID Café FlowChart OR\n*\t[B] "quoted"'),
-    })
-    for (const query of ['aI', 'CAFÉ', 'flowchart', 'OR * [B]', '"quoted"', '*']) {
-      await expect(ctx.sessionQuery.searchEvents({ sessionId: session.id, query, mode: 'literal' }))
-        .resolves.toMatchObject({ items: [{ seq: SessionSeq(0) }] })
-    }
-    for (const query of ['CAFE', 'OR [B]', '"FlowChart"', 'missing']) {
-      await expect(ctx.sessionQuery.searchSessions({ query, mode: 'literal' })).resolves.toEqual({ items: [] })
-    }
-    await expect(ctx.sessionQuery.searchSessions({ query: 'AI' })).resolves.toEqual({ items: [] })
-    await expect(ctx.sessionQuery.searchSessions({ query: 'CAFE', mode: 'phrase' }))
-      .resolves.toMatchObject({ items: [{ header: { id: session.id } }] })
-  })
-
-  it('keeps literal search live-preferred and applies current-message filters before ranking', async () => {
-    const id = SessionId('shared')
-    TestPersistence.reset([{ meta: header(id), events: messageEvents('冷记录缓存失效') }])
-    const ctx = await liveContext()
-    onTestFinished(() => ctx.fiber.dispose())
-    await ctx.plugin(TestPersistence)
-    await expect(ctx.sessionQuery.searchSessions({ query: '失效', mode: 'literal' }))
-      .resolves.toMatchObject({ items: [{ persisted: true, live: false }] })
-    const live = ctx.sessions.create(id, { seed: messageEvents('原消息缓存失效'), meta: header(id) })
-    live.append('user/message', createUserMessage({ content: [{ type: 'text', text: '替换后已通过' }], source: { kind: 'test' } }), {
-      surfaceOp: { op: 'replace', startSeq: SessionSeq(0), endSeq: SessionSeq(0) }, sourceEventSeqs: [SessionSeq(0)],
-    })
-    live.append('turn/end', { turn: 1, reason: { kind: 'error', error: { message: '错误缓存失效', code: 'UNKNOWN' } } })
-    await expect(ctx.sessionQuery.searchSessions({ query: '冷记录', mode: 'literal' })).resolves.toEqual({ items: [] })
-    await expect(ctx.sessionQuery.searchSessions({ query: '失效', mode: 'literal', eventFilters: [
-      { kind: 'surface', values: ['current'] }, { kind: 'type', values: ['user/message', 'assistant/message'] },
-    ] })).resolves.toEqual({ items: [] })
-    await expect(ctx.sessionQuery.searchSessions({ query: '已通过', mode: 'literal', sessionFilters: [{ kind: 'id', values: [id] }],
-      eventFilters: [{ kind: 'surface', values: ['current'] }] }))
-      .resolves.toMatchObject({ items: [{ live: true, persisted: true, bestMatch: { surface: 'current' } }] })
-    const hidden = await ctx.sessionQuery.searchEvents({ sessionId: id, query: '失效', mode: 'literal' })
-    expect(new Set(hidden.items.map(item => item.surface))).toEqual(new Set(['shadowed', 'log-only']))
-  })
-
-  it('isolates literal cursors by mode and retains scope-specific generation checks', async () => {
-    const ctx = await liveContext({ path: ':memory:', defaultLimit: 1 })
-    onTestFinished(() => ctx.fiber.dispose())
-    const target = ctx.sessions.create(SessionId('target'), { seed: messageEvents('递归分支 递归分支') })
-    const nextMessage = target.append('user/message', createUserMessage({ content: [{ type: 'text', text: '递归分支' }], source: { kind: 'user' } }), { surfaceOp: 'append' })
-    const other = ctx.sessions.create(SessionId('other'), { seed: messageEvents('递归分支') })
-    const grouped = await ctx.sessionQuery.searchSessions({ query: '递归分支', mode: 'literal' })
-    const events = await ctx.sessionQuery.searchEvents({ sessionId: target.id, query: '递归分支', mode: 'literal' })
-    expect(grouped.items[0]?.header.id).toBe(target.id)
-    expect(events.items[0]?.seq).toBe(SessionSeq(0))
-    if (grouped.nextCursor === undefined || events.nextCursor === undefined) throw new Error('Expected both search pages to continue')
-    await expect(ctx.sessionQuery.searchSessions({ query: '递归分支', cursor: grouped.nextCursor }))
-      .rejects.toThrow(expectCode('SESSION_QUERY_INVALID_CURSOR'))
-    await expect(ctx.sessionQuery.searchEvents({ sessionId: target.id, query: '递归分支', mode: 'phrase', cursor: events.nextCursor }))
-      .rejects.toThrow(expectCode('SESSION_QUERY_INVALID_CURSOR'))
-    await expect(ctx.sessionQuery.searchSessions({ query: '递归分支', mode: 'literal', cursor: grouped.nextCursor }))
-      .resolves.toMatchObject({ items: [{ header: { id: other.id } }] })
-    other.append('user/message', createUserMessage({ content: [{ type: 'text', text: 'new message' }], source: { kind: 'user' } }), { surfaceOp: 'append' })
-    await expect(ctx.sessionQuery.searchEvents({ sessionId: target.id, query: '递归分支', mode: 'literal', cursor: events.nextCursor }))
-      .resolves.toMatchObject({ items: [{ seq: nextMessage.seq }] })
-    await expect(ctx.sessionQuery.searchSessions({ query: '递归分支', mode: 'literal', cursor: grouped.nextCursor }))
-      .rejects.toThrow(expectCode('SESSION_QUERY_STALE_CURSOR'))
-  })
-
   it('defaults and validates opening policy and persisted inspection concurrency through its Cordis config', async () => {
     const defaultCtx = await liveContext()
     expect((defaultCtx.sessionQuery as SqliteSessionQueryEngine).config.openAt).toBe('startup')

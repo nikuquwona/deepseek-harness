@@ -122,7 +122,7 @@ describe('list store projection', () => {
 })
 
 describe('search', () => {
-  it.for([undefined, 'literal'] as const)('delegates transient content search in %s mode without changing the list snapshot', async (mode, { bench }) => {
+  it('delegates transient content search without changing the list snapshot', async ({ bench }) => {
     const b = bench()
     await feedList(b, [{ id: 's1' }])
     const before = b.svc.list.getSnapshot()
@@ -133,7 +133,7 @@ describe('search', () => {
     const signal = new AbortController().signal
     const call = vi.spyOn(b.mock.rpc, 'call')
 
-    await expect(b.svc.search('needle', signal, mode)).resolves.toEqual({
+    await expect(b.svc.search('needle', signal)).resolves.toEqual({
       ok: true,
       value: {
         items: [{ sessionId: 's1', snippet: 'matching excerpt' }],
@@ -141,7 +141,6 @@ describe('search', () => {
       },
     })
     expect(call.mock.calls.find(([, endpoint]) => endpoint === 'session/search')?.[3]).toBe(signal)
-    expect(b.mock.remote.session.search).toHaveBeenCalledWith({ query: 'needle', ...mode === undefined ? {} : { mode } })
     expect(b.svc.list.getSnapshot()).toBe(before)
   })
 })

@@ -36,7 +36,6 @@ import type {
   SessionSearchCursor as SessionSearchCursorValue,
   SessionSearchPage,
   SessionSearchRequest,
-  SessionSearchMode,
 } from '@deepseek-ai/dsh-session-query'
 import {
   type JournalMode,
@@ -51,7 +50,6 @@ import {
   assertPortableBindingCount,
   buildEventWhere,
   buildSessionWhere,
-  createLiteralHighlighter,
   makeSnippet,
   normalizeEventRequest,
   normalizeSessionRequest,
@@ -651,13 +649,13 @@ export class SqliteSessionQueryEngine extends SessionQueryEngine {
     offset: number,
     persistenceBinding: PersistenceBinding,
   ): SearchRow[] {
-    const selected = this._selectDocuments(request, persistenceBinding.service !== undefined)
+    const selected = selectedDocumentsSql()
     const sessionWhere = buildSessionWhere(request.sessionFilters)
     const eventWhere = buildEventWhere(request.eventFilters)
     assertFts5OuterPredicateCount(sessionWhere.predicateCount + eventWhere.predicateCount)
     const where = [sessionWhere.sql, eventWhere.sql].filter(Boolean).join(' AND ')
     const bindings = [
-      ...selected.params,
+      ...selectedDocumentsParams(request.query, persistenceBinding.service !== undefined),
       ...sessionWhere.params,
       ...eventWhere.params,
       request.limit + 1,
@@ -688,12 +686,12 @@ export class SqliteSessionQueryEngine extends SessionQueryEngine {
     offset: number,
     persistenceBinding: PersistenceBinding,
   ): SearchRow[] {
-    const selected = this._selectDocuments(request, persistenceBinding.service !== undefined)
+    const selected = selectedDocumentsSql()
     const eventWhere = buildEventWhere(request.filters)
     assertFts5OuterPredicateCount(1 + eventWhere.predicateCount)
     const where = ['session_id = ?', eventWhere.sql].filter(Boolean).join(' AND ')
     const bindings = [
-      ...selected.params,
+      ...selectedDocumentsParams(request.query, persistenceBinding.service !== undefined),
       request.sessionId,
       ...eventWhere.params,
       request.limit + 1,
@@ -707,24 +705,6 @@ export class SqliteSessionQueryEngine extends SessionQueryEngine {
       ORDER BY match_count DESC, document_length ASC, time DESC, seq DESC
       LIMIT ? OFFSET ?
     `).all(...bindings) as unknown as SearchRow[]
-  }
-
-  private _selectDocuments(
-    request: NormalizedSessionRequest | NormalizedEventRequest,
-    persistenceVisible: boolean,
-  ): { sql: string; params: Array<string | number> } {
-    if (request.mode === 'literal') {
-      const highlight = createLiteralHighlighter(request.query)
-      // Serialized queries replace this matcher only between completed statements.
-      this._requireDb().function('session_literal_highlight', { deterministic: true }, (text) => {
-        if (typeof text !== 'string') throw new Error('session-search indexed document text must be a string')
-        return highlight(text)
-      })
-    }
-    return {
-      ...selectedDocumentsSql(request.mode),
-      params: selectedDocumentsParams(request.query, persistenceVisible, request.mode),
-    }
   }
 
   private _targetObservation(
@@ -814,8 +794,7 @@ function headerBindings(
   ]
 }
 
-function selectedDocumentsSql(mode: SessionSearchMode): { sql: string } {
-  const literal = mode === 'literal'
+function selectedDocumentsSql(): { sql: string } {
   return {
     sql: `WITH candidates AS (
       SELECT
@@ -833,11 +812,11 @@ function selectedDocumentsSql(mode: SessionSearchMode): { sql: string } {
         pd.type AS type,
         CAST(pd.time AS INTEGER) AS time,
         pd.surface AS surface,
-        ${literal ? 'session_literal_highlight(pd.text)' : 'highlight(persisted_docs, 0, ?, ?)'} AS marked_text,
+        highlight(persisted_docs, 0, ?, ?) AS marked_text,
         CAST(pd.codepoint_length AS INTEGER) AS document_length
       FROM persisted_docs AS pd
       JOIN persisted_sessions AS ps ON ps.id = pd.session_id
-      WHERE ${literal ? '1' : 'persisted_docs MATCH ?'}
+      WHERE persisted_docs MATCH ?
         AND ? = 1
         AND NOT EXISTS (SELECT 1 FROM temp.live_sessions AS ls WHERE ls.id = pd.session_id)
       UNION ALL
@@ -856,11 +835,11 @@ function selectedDocumentsSql(mode: SessionSearchMode): { sql: string } {
         ld.type AS type,
         CAST(ld.time AS INTEGER) AS time,
         ld.surface AS surface,
-        ${literal ? 'session_literal_highlight(ld.text)' : 'highlight(live_docs, 0, ?, ?)'} AS marked_text,
+        highlight(live_docs, 0, ?, ?) AS marked_text,
         CAST(ld.codepoint_length AS INTEGER) AS document_length
       FROM temp.live_docs AS ld
       JOIN temp.live_sessions AS ls ON ls.id = ld.session_id
-      WHERE ${literal ? '1' : 'live_docs MATCH ?'}
+      WHERE live_docs MATCH ?
     ), matched AS (
       SELECT *,
         (
@@ -868,15 +847,13 @@ function selectedDocumentsSql(mode: SessionSearchMode): { sql: string } {
           - length(CAST(replace(marked_text, ?, '') AS BLOB))
         ) / ? AS match_count
       FROM candidates
-      ${literal ? 'WHERE marked_text IS NOT NULL' : ''}
     )`,
   }
 }
 
-function selectedDocumentsParams(query: string, persistenceVisible: boolean, mode: SessionSearchMode): Array<string | number> {
-  const visible = persistenceVisible ? 1 : 0
-  if (mode === 'literal') return [visible, visible, FTS_HIGHLIGHT_START, Buffer.byteLength(FTS_HIGHLIGHT_START, 'utf8')]
+function selectedDocumentsParams(query: string, persistenceVisible: boolean): Array<string | number> {
   const expression = quoteFtsData(query)
+  const visible = persistenceVisible ? 1 : 0
   return [
     FTS_HIGHLIGHT_START,
     FTS_HIGHLIGHT_END,

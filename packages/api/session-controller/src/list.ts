@@ -182,10 +182,9 @@ export class ApiSessionList {
    * Search current visible message content without activating any matching Session.
    * @param query - literal message-content query.
    * @param signal - cancellation for list and search reads.
-   * @param mode - native matching semantics; omitted retains phrase search.
    * @returns authorized bounded Session search results.
    */
-  async search(query: string, signal: AbortSignal, mode?: 'phrase' | 'literal'): Promise<SessionSearchValue> {
+  async search(query: string, signal: AbortSignal): Promise<SessionSearchValue> {
     const normalizedQuery = normalizeSearchQuery(query)
     signal.throwIfAborted()
     const provider = this.ctx.get('sessionQuery')
@@ -221,7 +220,6 @@ export class ApiSessionList {
         try {
           page = await provider.searchSessions({
             query: normalizedQuery,
-            ...mode === undefined ? {} : { mode },
             eventFilters: [
               { kind: 'type', values: ['user/message', 'assistant/message'] },
               { kind: 'surface', values: ['current'] },

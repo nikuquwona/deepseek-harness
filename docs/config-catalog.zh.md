@@ -1136,7 +1136,7 @@ export interface Config {
 ## `@deepseek-ai/dsh-experimental-session-tree`
 
 - `inject`: `storageDomain` · `sessionQuery` · `sessions` · `agents` · `sessionController`
-- `source`: [`packages/experimental/session-tree/src/index.ts:18`](../packages/experimental/session-tree/src/index.ts)
+- `source`: [`packages/experimental/session-tree/src/index.ts:21`](../packages/experimental/session-tree/src/index.ts)
 
 ```ts config-catalog
 /** Presentation limits; full Session data is owned by the native persistence service. */
@@ -1145,6 +1145,10 @@ export interface Config {
   readonly summaryLength: number
   /** Maximum recent artifacts returned for each conversation card. */
   readonly artifactLimit: number
+  /** Maximum conversation matches returned by one message-content search. */
+  readonly searchResultLimit: number
+  /** Maximum Unicode code points in a message-content search snippet. */
+  readonly searchSnippetLength: number
 }
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-experimental-session-tree -->
@@ -2685,7 +2689,7 @@ export interface Config {
 
 - `inject`: `sessions`
 - `refs`: [`SessionQueryConfig`](../packages/session-query/session-query/src/index.ts)
-- `source`: [`packages/session-query/session-query-sqlite/src/index.ts:94`](../packages/session-query/session-query-sqlite/src/index.ts)
+- `source`: [`packages/session-query/session-query-sqlite/src/index.ts:92`](../packages/session-query/session-query-sqlite/src/index.ts)
 
 ```ts config-catalog
 /** Combined session-query configuration backed by SQLite full-text search. */
@@ -4519,6 +4523,7 @@ export interface Config {
 | `@deepseek-ai/dsh-experimental-agent-team-profile` | — | [`packages/experimental/agent-team-profile/src/index.ts`](../packages/experimental/agent-team-profile/src/index.ts) |
 | `@deepseek-ai/dsh-experimental-browser-use-runtime` | — | [`packages/experimental/browser-use-runtime/src/index.ts`](../packages/experimental/browser-use-runtime/src/index.ts) |
 | `@deepseek-ai/dsh-experimental-inspector-profile` | — | [`packages/experimental/inspector-profile/src/index.ts`](../packages/experimental/inspector-profile/src/index.ts) |
+| `@deepseek-ai/dsh-experimental-session-tree-bundle` | — | [`packages/experimental/session-tree-bundle/src/index.ts`](../packages/experimental/session-tree-bundle/src/index.ts) |
 | `@deepseek-ai/dsh-experimental-voice-input-bundle` | — | [`packages/experimental/voice-input-bundle/src/index.ts`](../packages/experimental/voice-input-bundle/src/index.ts) |
 | `@deepseek-ai/dsh-experimental-webworker-packer` | — | [`packages/experimental/webworker-packer/src/index.ts`](../packages/experimental/webworker-packer/src/index.ts) |
 | `@deepseek-ai/dsh-experimental-webworker-runtime` | — | [`packages/experimental/webworker-runtime/src/index.ts`](../packages/experimental/webworker-runtime/src/index.ts) |

@@ -1113,6 +1113,16 @@ A plugin-owned sidecar for trees whose ancestry lives in native Session headers.
 @Remote list(signal: AbortSignal): Promise<TreeSnapshot>
 
 /**
+ * Scan current messages through public native observations without opening a search index.
+ * Only ordinary Sessions visible in the native conversation list are read. Results follow
+ * the native newest-first listing and contain no full transcript or persistent search data.
+ * @param query - non-blank literal text, at most 500 UTF-16 code units after trimming.
+ * @param signal - cancellation for a superseded query or cold Session read.
+ * @returns bounded conversation matches and whether further matches exist.
+ */
+@Remote search(query: string, signal: AbortSignal): Promise<TreeSearchResult>
+
+/**
  * Rename the native Session and save its card summary without issuing a model request.
  * @param sessionId - an existing native Session.
  * @param title - required native title, normalized by the Session Controller.

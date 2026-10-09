@@ -25,7 +25,7 @@ Find related conversations, their origins, and their results on an infinite map.
 <a id="use-this-package"></a>
 ## Use this package
 
-Follow the [host package's launch instructions](../session-tree/README.md#use-this-package); its overlay enables both halves. The map appears in the ordinary sidebar. A session-header shortcut locates the current conversation and its connected exploration; the existing native branching action remains the only branch button in chat.
+Install the [conversation map bundle](../session-tree-bundle/README.md#use-this-package) to manage both halves together. The map appears in the ordinary sidebar. A session-header shortcut locates the current conversation and its connected exploration; the existing native branching action remains the only branch button in chat.
 
 - Drag the canvas background to pan. Use **+**, **−**, or **Fit map** to change scale; arrow keys pan a focused canvas. The overview keeps titles readable and reveals summaries and results when zoomed in. Search includes names, summaries, and native message content; selecting a result restores a readable scale.
 - Open a card to continue that existing conversation. Use the native branch action at a reply to start an independent exploration with its exact context prefix. Children appear below their parent, with sibling conversations arranged side by side.

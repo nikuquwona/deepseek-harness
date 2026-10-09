@@ -459,17 +459,15 @@ export class SessionManager {
   /**
    * Search visible session message content without adding transient query
    * state to the list snapshot.
-   * @param query - non-blank search text.
+   * @param query - non-blank literal phrase.
    * @param signal - cancellation for superseded UI queries.
-   * @param mode - native matching semantics; omitted retains phrase search.
    * @returns the Host result or a folded transport error.
    */
   async search(
     query: string,
     signal: AbortSignal,
-    mode?: 'phrase' | 'literal',
   ): Promise<RemoteResult<{ items: SessionSearchResultItem[]; hasMore: boolean }>> {
-    const result = await this.remote.session.search({ query, ...mode === undefined ? {} : { mode } }, signal)
+    const result = await this.remote.session.search({ query }, signal)
     if (!result.ok) return result
     return {
       ok: true,

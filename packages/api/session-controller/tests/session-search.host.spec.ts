@@ -104,7 +104,7 @@ describe('session.search', () => {
     await ctx.fiber.dispose()
   })
 
-  it.each([undefined, 'literal'] as const)('searches only list-visible ids and current conversation-message events in %s mode', async (mode) => {
+  it('searches only list-visible ids and current conversation-message events', async () => {
     const ctx = await baseContext()
     const live = ctx.sessions.create(sid('live'), { meta: header('live', '/live') })
     live.append('user/message', createUserMessage({
@@ -154,7 +154,7 @@ describe('session.search', () => {
     const remote = createSessionTestRemote(ctx, defaults)
     const signal = new AbortController().signal
 
-    const response = await remote.search({ ...request('  matching answer  '), ...mode === undefined ? {} : { mode } }, signal)
+    const response = await remote.search(request('  matching answer  '), signal)
 
     expect(response).toEqual({
       ok: true,
@@ -170,7 +170,6 @@ describe('session.search', () => {
     ]
     expect(query).toEqual({
       query: 'matching answer',
-      ...mode === undefined ? {} : { mode },
       eventFilters: [
         {
           kind: 'type',

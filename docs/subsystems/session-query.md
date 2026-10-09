@@ -146,7 +146,7 @@ interface SessionEventSearchDocument extends SessionEventRecord {
 
 ## Full-text search pages
 
-The combined `ctx.sessionQuery` seam has two full-text scopes. `searchSessions()` groups the corpus by strongest matching event; `searchEvents()` searches one session. Requests default to `phrase` matching; explicit `literal` mode finds case-insensitive, whitespace-flexible substrings. An opaque cursor binds to the normalized query, mode, metadata filters, and limit. The event text scan is intentionally absent from provider metadata filters.
+The combined `ctx.sessionQuery` seam has two full-text scopes. `searchSessions()` groups the corpus by strongest matching event; `searchEvents()` searches one session. Requests bind an opaque cursor to the normalized query, metadata filters, and limit. The event text scan is intentionally absent from provider metadata filters.
 
 ```ts type-equiv
 /** Provider-owned opaque continuation token returned by session search. */
@@ -154,17 +154,10 @@ type SessionSearchCursor = Branded<'SessionSearchCursor'>
 ```
 
 ```ts type-equiv
-/** Phrase token matching or case-insensitive, whitespace-flexible literal substring matching. */
-type SessionSearchMode = 'phrase' | 'literal'
-```
-
-```ts type-equiv
-/** Cross-session search request. */
+/** Cross-session full-text search request. */
 interface SessionSearchRequest {
   /** Full-text query interpreted as data, never executable FTS syntax. */
   query: string
-  /** Matching semantics; omitted selects the provider's phrase search. */
-  mode?: SessionSearchMode
   /** Logical-session predicates applied before event ranking. */
   sessionFilters?: readonly SessionResultFilter[]
   /** Event predicates applied before event ranking. */
@@ -177,14 +170,12 @@ interface SessionSearchRequest {
 ```
 
 ```ts type-equiv
-/** Within-session search request. */
+/** Within-session full-text search request. */
 interface SessionEventSearchRequest {
   /** Session whose live-preferred logical log is searched. */
   sessionId: SessionId
   /** Full-text query interpreted as data, never executable FTS syntax. */
   query: string
-  /** Matching semantics; omitted selects the provider's phrase search. */
-  mode?: SessionSearchMode
   /** Event predicates applied before ranking. */
   filters?: readonly SessionEventMetadataFilter[]
   /** Maximum events in this page. */

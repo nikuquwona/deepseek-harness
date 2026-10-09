@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用此包
 
-构建仓库，然后通过[可选配置覆盖层](cordis.source.patch.yml)启动普通 Web 应用：
+安装[对话地图组合包](../session-tree-bundle/README.zh.md#use-this-package)，通过一个开关管理。源码开发时，也可构建仓库并改用[可选配置覆盖层](cordis.source.patch.yml)：
 
 ```bash
 pnpm run build
@@ -34,7 +34,7 @@ pnpm dsh web --patch ./packages/experimental/session-tree/cordis.source.patch.ym
 
 在侧栏选择**对话地图**。[画布包](../client-ui-session-tree/README.zh.md)介绍导航和结果预览。现有普通会话会自动出现，包括启用插件前创建的原生分叉。真实对话的模型服务可在常规「模型」设置中选择。
 
-覆盖层还会启用原生消息搜索：将 `session-query-sqlite` 配置为 `path: ':memory:'` 和 `openAt: first-search`，在第一次查询时打开派生索引。普通 Web 配置默认关闭全文搜索。自定义组合需要启用原生索引才能搜索消息；如果索引被禁用或搜索失败，地图会显示失败提示，并继续展示匹配的名称和摘要。
+消息搜索读取原生 Session 观察结果，并复用公开的语义文本辅助函数。它支持不区分大小写的字面片段，包括中文单字，无须启用或替换原生 SQLite 搜索索引。它跨工作区搜索带有工作区元数据的普通 Session 中的当前 user/assistant 消息。结果沿用原生列表从新到旧的顺序，每个 Session 返回其最新匹配消息的摘录。读取失败时显示错误，同时保留匹配的名称和摘要。
 
 打开卡片即可继续已有的原生对话。要探索其他方向，请使用原生对话的分叉操作：新 Session 继承精确事件前缀，并保留父会话日志。返回某个 Session 不会创建分支。原生置顶功能可以保留常用会话入口，会话树不要求指定主线。
 
@@ -48,7 +48,7 @@ pnpm dsh web --patch ./packages/experimental/session-tree/cordis.source.patch.ym
 <details>
 <summary>实现细节 — 点击展开</summary>
 
-[服务](src/index.ts)通过会话查询读取冷会话或活跃会话。Remote API 提供会话树读取和注解保存；保存时委托 Session Controller 重命名，确认原生标题落盘后再保存摘要。Session 命令及完整对话渲染仍由原生服务负责。[存储域](src/spec.ts)只保存摘要。[预览投影](src/preview.ts)提取追加消息的文本、原生文件声明、类似 Git 输出的文本、GitHub 引用和 Mermaid 源码；每张卡片的结果和摘要不包含继承事件。浏览器通过生成的类型化 Remote 读取这些投影。
+[服务](src/index.ts)通过会话查询读取冷会话或活跃会话。Remote API 提供会话树读取、可取消的消息搜索和注解保存；保存时委托 Session Controller 重命名，确认原生标题落盘后再保存摘要。Session 命令及完整对话渲染仍由原生服务负责。[存储域](src/spec.ts)只保存摘要。[预览投影](src/preview.ts)提取追加消息的文本、原生文件声明、类似 Git 输出的文本、GitHub 引用和 Mermaid 源码；每张卡片的结果和摘要不包含继承事件。浏览器通过生成的类型化 Remote 读取这些投影。
 
 卡片预览缓存在内存中。活跃卡片要求 Session 实例和事件游标都未变化；冷会话卡片要求持久化服务实例和当前持久 revision 都未变化。来源变化后重新读取，无法取得可靠 revision 的来源不会复用。注释和运行状态独立于缓存，每次读取当前值。取消刷新会停止待完成的读取；卸载插件会等待操作结束，再关闭注释存储。缓存只保留预览，不保留完整日志；Session 离开列表后删除对应缓存。
 
@@ -91,6 +91,7 @@ pnpm dsh web --patch ./packages/experimental/session-tree/cordis.source.patch.ym
 
 这个实验明确保留以下存储和预览边界：
 
+- 每次正文搜索按需读取原生日志，结果数量和摘录长度可配置，并在会话之间处理取消。它不保留持久搜索索引。
 - 首次列出会话树会读取每个普通 Session 的日志，大型归档可能加载较慢。后续读取通过活跃游标或轻量持久化 revision 校验缓存。画布目前未做虚拟化。
 - 原生分叉复制前缀，因此磁盘占用会随分支数量和前缀长度增长。独立会话共享配置的文件系统工作区；分叉不会创建 Git worktree。
 - 提交、PR、链接和 Mermaid 预览都是文本引用，不代表经过验证的外部成果。非错误工具输出中类似 Git 的文本不能证明提交存在。源内容仍应在原生对话中查看。

@@ -146,7 +146,7 @@ interface SessionEventSearchDocument extends SessionEventRecord {
 
 ## 全文搜索结果页
 
-整合后的 `ctx.sessionQuery` seam 提供两个全文搜索范围。`searchSessions()` 按匹配度最强的事件对语料库分组；`searchEvents()` 搜索单个会话。请求默认使用 `phrase` 匹配；显式 `literal` 模式查找不区分大小写、空白灵活的子字符串。不透明游标绑定到规范化后的查询、模式、元数据过滤器和结果数量上限。提供方的元数据过滤器有意不包含事件文本扫描。
+整合后的 `ctx.sessionQuery` seam 提供两个全文搜索范围。`searchSessions()` 按匹配度最强的事件对语料库分组；`searchEvents()` 搜索单个会话。请求将不透明游标与规范化后的查询、元数据过滤器和结果数量上限绑定。提供方的元数据过滤器有意不包含事件文本扫描。
 
 ```ts type-equiv
 /** Provider-owned opaque continuation token returned by session search. */
@@ -154,17 +154,10 @@ type SessionSearchCursor = Branded<'SessionSearchCursor'>
 ```
 
 ```ts type-equiv
-/** Phrase token matching or case-insensitive, whitespace-flexible literal substring matching. */
-type SessionSearchMode = 'phrase' | 'literal'
-```
-
-```ts type-equiv
-/** Cross-session search request. */
+/** Cross-session full-text search request. */
 interface SessionSearchRequest {
   /** Full-text query interpreted as data, never executable FTS syntax. */
   query: string
-  /** Matching semantics; omitted selects the provider's phrase search. */
-  mode?: SessionSearchMode
   /** Logical-session predicates applied before event ranking. */
   sessionFilters?: readonly SessionResultFilter[]
   /** Event predicates applied before event ranking. */
@@ -177,14 +170,12 @@ interface SessionSearchRequest {
 ```
 
 ```ts type-equiv
-/** Within-session search request. */
+/** Within-session full-text search request. */
 interface SessionEventSearchRequest {
   /** Session whose live-preferred logical log is searched. */
   sessionId: SessionId
   /** Full-text query interpreted as data, never executable FTS syntax. */
   query: string
-  /** Matching semantics; omitted selects the provider's phrase search. */
-  mode?: SessionSearchMode
   /** Event predicates applied before ranking. */
   filters?: readonly SessionEventMetadataFilter[]
   /** Maximum events in this page. */

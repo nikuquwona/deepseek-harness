@@ -20,7 +20,7 @@ import { ToolCallId } from '@deepseek-ai/dsh-llm/brand'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import { createSessionTestRemote } from '../../../api/session-controller/tests/test-remote.ts'
 import { MockAdapter, textResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
-import type {} from '../src/index.ts'
+import type { Config } from '../src/index.ts'
 import { treeDomain } from '../src/spec.ts'
 
 let root: string | undefined
@@ -33,7 +33,7 @@ afterEach(async () => {
   vi.restoreAllMocks()
 })
 
-async function boot(directory: string, enableTree = true) {
+async function boot(directory: string, enableTree = true, treeConfig: Partial<Config> = {}) {
   const context = ctx = new Context()
   const logs: string[] = []
   context.logger.exporter({ export: (record) => { logs.push(record.args.map(String).join(' ')) } })
@@ -57,7 +57,7 @@ async function boot(directory: string, enableTree = true) {
     context.loader.internal = undefined
     const path = join(directory,'cordis.yml')
     const plugin = new URL('../src/index.ts',import.meta.url).href
-    await writeFile(path, `- id: session-tree\n  name: '${plugin}'\n`)
+    await writeFile(path, `- id: session-tree\n  name: '${plugin}'\n  config: ${JSON.stringify(treeConfig)}\n`)
     await context.loader.create({ name: 'cordis:include', config: { path: pathToFileURL(path).href } })
     await context.loader.await()
     for (const entry of context.loader.entries()) await entry.fiber?.await()
@@ -333,4 +333,117 @@ it('cancels refreshes and releases the plugin while preserving native Sessions',
   expect(context.get('sessionTree')).toBeUndefined()
   expect(context.agents.get(agent.id)).toBe(agent)
   await expect(tree.list(new AbortController().signal)).rejects.toThrow()
+})
+
+it('finds Chinese message fragments live and after restart without using a full-text provider', async () => {
+  root = await mkdtemp(join(tmpdir(), 'dsh-session-tree-search-'))
+  const { context, harness } = await boot(root)
+  const adapter = new MockAdapter([textResponse('FlowChart OR\n*\t[B] "quoted"')])
+  context.llm.registerAdapter(['mock'], adapter)
+  const agent = await harness.create(SessionId('searchable-conversation'), { provider: 'mock', model: 'mock' }, { cwd: root })
+  agent.followup(prompt('评审递归分支 B：进一步验证缓存失效测试'))
+  await agent.whenIdle()
+  const nativeSearch = vi.spyOn(context.sessionQuery, 'searchSessions')
+  const queries = ['递归分支', '失效', '效', 'FLOWCHART', 'OR * [B]', '"quoted"']
+  const before = []
+  for (const query of queries) {
+    const result = await context.sessionTree.search(query, new AbortController().signal)
+    expect(result.items.map(item => item.sessionId)).toEqual([agent.id])
+    expect(result.hasMore).toBe(false)
+    before.push(result)
+  }
+  expect(nativeSearch).not.toHaveBeenCalled()
+  expect(adapter.requests).toHaveLength(1)
+  await context.fiber.dispose()
+  ctx = undefined
+
+  const restarted = await boot(root)
+  const coldSearch = vi.spyOn(restarted.context.sessionQuery, 'searchSessions')
+  for (const [index, query] of queries.entries()) {
+    expect(await restarted.context.sessionTree.search(query, new AbortController().signal)).toEqual(before[index])
+  }
+  expect(coldSearch).not.toHaveBeenCalled()
+  expect(restarted.context.agents.list()).toHaveLength(0)
+  expect(restarted.context.sessions.get(agent.id)).toBeUndefined()
+
+  const snapshot = await restarted.context.sessionQuery.readSession(agent.id)
+  const live = restarted.context.sessions.create(agent.id, { meta: snapshot.session, seed: snapshot.events })
+  const original = live.snapshotEvents().find(event => event.type === 'user/message' && event.data.source.kind === 'user')
+  if (original === undefined) throw new Error('Expected the native user message')
+  live.append('user/message', prompt('replacement 已通过'), {
+    surfaceOp: { op: 'replace', startSeq: original.seq, endSeq: original.seq },
+    sourceEventSeqs: [original.seq],
+  })
+  expect(await restarted.context.sessionTree.search('失效', new AbortController().signal)).toEqual({ items: [], hasMore: false })
+  expect(await restarted.context.sessionTree.search('已通过', new AbortController().signal)).toMatchObject({ items: [{ sessionId: agent.id }] })
+})
+
+it('bounds snippets and results to ordinary native list-visible conversations', async () => {
+  root = await mkdtemp(join(tmpdir(), 'dsh-session-tree-search-limits-'))
+  const { context } = await boot(root, true, { searchResultLimit: 1, searchSnippetLength: 18 })
+  for (const [name, meta] of [
+    ['older', { cwd: root, createdAt: 10 }],
+    ['newer', { cwd: root, createdAt: 20 }],
+    ['subagent', { cwd: root, createdAt: 30, origin: 'subagent' as const }],
+    ['without-workspace', { createdAt: 40 }],
+  ] as const) {
+    const session = context.sessions.create(SessionId(name), { meta })
+    session.append('user/message', prompt(`${'😀'.repeat(30)}缓存失效测试${'尾'.repeat(40)}`), { surfaceOp: 'append' })
+  }
+  const observe = vi.spyOn(context.sessionQuery, 'observeSession')
+  const result = await context.sessionTree.search('失效', new AbortController().signal)
+  expect(result).toMatchObject({ items: [{ sessionId: 'newer' }], hasMore: true })
+  expect(result.items[0]?.snippet).toContain('失效')
+  expect(Array.from(result.items[0]?.snippet ?? '')).toHaveLength(18)
+  expect(observe.mock.calls.map(([id]) => id)).toEqual(['newer', 'older'])
+  expect(await context.sessionTree.search('absent', new AbortController().signal)).toEqual({ items: [], hasMore: false })
+  const before = observe.mock.calls.length
+  for (const query of ['', '   ', 'x'.repeat(501)]) {
+    await expect(context.sessionTree.search(query, new AbortController().signal)).rejects.toThrow()
+  }
+  expect(observe.mock.calls).toHaveLength(before)
+})
+
+it('cancels searches, awaits pending reads during unload, and supports remounting', async () => {
+  root = await mkdtemp(join(tmpdir(), 'dsh-session-tree-search-unload-'))
+  const { context, harness } = await boot(root)
+  const agent = await harness.create(SessionId('search-survives-unload'), {}, { cwd: root })
+  agent.session.append('user/message', prompt('缓存失效'), { surfaceOp: 'append' })
+  const tree = context.sessionTree
+  const cancelled = new AbortController()
+  cancelled.abort(new Error('Search superseded'))
+  await expect(tree.search('失效', cancelled.signal)).rejects.toThrow('Search superseded')
+
+  const entered = Promise.withResolvers<AbortSignal>()
+  const release = Promise.withResolvers<undefined>()
+  const read = context.sessionQuery.observeSession.bind(context.sessionQuery)
+  vi.spyOn(context.sessionQuery, 'observeSession').mockImplementationOnce(async (id, options) => {
+    if (options?.signal === undefined) throw new Error('Expected a cancellable observation')
+    entered.resolve(options.signal)
+    await release.promise
+    return read(id, options)
+  })
+  const pending = tree.search('失效', new AbortController().signal)
+  const rejected = expect(pending).rejects.toThrow()
+  const signal = await entered.promise
+  const entry = [...context.loader.entries()].find(candidate => candidate.options.id === 'session-tree')
+  if (entry?.fiber === undefined) throw new Error('Expected the Loader-owned tree plugin')
+  let disposed = false
+  const disposing = entry.fiber.dispose().then(() => { disposed = true })
+  try {
+    await vi.waitFor(() => { expect(signal.aborted).toBe(true) })
+    expect(disposed).toBe(false)
+  } finally {
+    release.resolve(undefined)
+    await Promise.all([disposing, rejected])
+  }
+  expect(context.get('sessionTree')).toBeUndefined()
+  expect(context.agents.get(agent.id)).toBe(agent)
+  await expect(tree.search('失效', new AbortController().signal)).rejects.toThrow()
+  await entry.update({ disabled: true })
+  await entry.update({ disabled: false })
+  await context.loader.await()
+  await entry.fiber?.await()
+  expect(await context.sessionTree.search('失效', new AbortController().signal))
+    .toEqual({ items: [{ sessionId: agent.id, snippet: '缓存失效' }], hasMore: false })
 })

@@ -1,5 +1,6 @@
 /** Native Session cards with revision-validated previews and persistent annotations. */
 import { Service, type Context } from '@deepseek-ai/cordis'
+import { setImmediate } from 'node:timers/promises'
 import schema from '@deepseek-ai/schemastery'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { KvTable } from '@deepseek-ai/dsh-storage-domain'
@@ -10,7 +11,9 @@ import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-api-session-controller'
 import { annotationSchema, treeDomain, type StoredTreeAnnotation } from './spec.ts'
 import { excerpt, projectArtifacts, projectMessages } from './preview.ts'
-import type { TreeAnnotation, TreeNode, TreeSnapshot } from './types.ts'
+import { findMessageSnippet } from './search.ts'
+import type { TreeAnnotation, TreeNode, TreeSearchItem, TreeSearchResult, TreeSnapshot } from './types.ts'
+import { z } from 'zod'
 
 export type * from './types.ts'
 
@@ -20,7 +23,13 @@ export interface Config {
   readonly summaryLength: number
   /** Maximum recent artifacts returned for each conversation card. */
   readonly artifactLimit: number
+  /** Maximum conversation matches returned by one message-content search. */
+  readonly searchResultLimit: number
+  /** Maximum Unicode code points in a message-content search snippet. */
+  readonly searchSnippetLength: number
 }
+
+const searchQuerySchema = z.string().trim().min(1).max(500)
 
 type NativeCard = Omit<TreeNode, 'customSummary' | 'running'>
 type CachedCard = { readonly card: NativeCard } & (
@@ -40,6 +49,8 @@ export class SessionTree extends TypertRemoteService {
   static Config: schema<Config> = schema.object({
     summaryLength: schema.number().min(40).max(2000).default(220),
     artifactLimit: schema.number().min(1).max(50).default(6),
+    searchResultLimit: schema.number().min(1).max(200).default(20),
+    searchSnippetLength: schema.number().min(3).max(2000).default(240),
   })
 
   private annotations!: KvTable<SessionId, StoredTreeAnnotation>
@@ -106,6 +117,36 @@ export class SessionTree extends TypertRemoteService {
         })
       }
       return { nodes }
+    }, signal)
+  }
+
+  /**
+   * Scan current messages through public native observations without opening a search index.
+   * Only ordinary Sessions visible in the native conversation list are read. Results follow
+   * the native newest-first listing and contain no full transcript or persistent search data.
+   * @param query - non-blank literal text, at most 500 UTF-16 code units after trimming.
+   * @param signal - cancellation for a superseded query or cold Session read.
+   * @returns bounded conversation matches and whether further matches exist.
+   */
+  @Remote
+  search(query: string, signal: AbortSignal): Promise<TreeSearchResult> {
+    return this.operation(async (activeSignal) => {
+      const normalized = searchQuerySchema.parse(query)
+      const records = await this.ctx.sessionQuery.listSessions(activeSignal)
+      activeSignal.throwIfAborted()
+      const items: TreeSearchItem[] = []
+      for (const { header } of records) {
+        if (header.origin === 'subagent' || header.cwd === undefined) continue
+        await setImmediate(undefined, { signal: activeSignal })
+        using observed = await this.ctx.sessionQuery.observeSession(header.id, { signal: activeSignal, projectionMode: 'none' })
+        activeSignal.throwIfAborted()
+        if (observed.header.origin === 'subagent' || observed.header.cwd === undefined) continue
+        const snippet = findMessageSnippet(header.id, observed.events, normalized, this.config.searchSnippetLength)
+        if (snippet === null) continue
+        if (items.length === this.config.searchResultLimit) return { items, hasMore: true }
+        items.push({ sessionId: header.id, snippet })
+      }
+      return { items, hasMore: false }
     }, signal)
   }
 

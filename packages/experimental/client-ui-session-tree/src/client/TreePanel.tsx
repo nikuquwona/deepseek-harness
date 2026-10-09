@@ -6,7 +6,7 @@ import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { ThemeSnapshot } from '@deepseek-ai/dsh-client-ui-theme/client'
 import type { InjectFace, PropsLocale, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { SessionSearchResultItem } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { TreeSearchItem, TreeSearchResult } from '@deepseek-ai/dsh-experimental-session-tree/types'
 import type { TreeState } from './model.ts'
 import type { createTreeViewStore } from './view-store.ts'
 import { CARD, ancestorPath, layoutForest, visibleTree } from './layout.ts'
@@ -26,7 +26,7 @@ export interface TreeInjected {
   readonly create: () => void
   readonly open: (id: SessionId) => void
   readonly annotate: (id: SessionId, title: string, summary: string) => Promise<void>
-  readonly search: (query: string, signal: AbortSignal) => Promise<{ items: SessionSearchResultItem[]; hasMore: boolean }>
+  readonly search: (query: string, signal: AbortSignal) => Promise<TreeSearchResult>
 }
 
 /** Framework-derived map props. */
@@ -50,7 +50,7 @@ export function TreePanel(props: TreePanelProps) {
   const view = useStore(value => value)
   const [query, setQuery] = useState('')
   const [contentSearch, setContentSearch] = useState({
-    query: '', items: [] as SessionSearchResultItem[], hasMore: false, pending: false, error: false,
+    query: '', items: [] as TreeSearchItem[], hasMore: false, pending: false, error: false,
   })
   const [focusAfterLoad, setFocusAfterLoad] = useState<SessionId | null>(null)
   const viewport = useRef<HTMLDivElement>(null)

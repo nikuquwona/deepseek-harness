@@ -1,0 +1,37 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/experimental/session-tree-bundle/README.md
+/:
+  en: c02d18225f0b1df8
+  zh: fc090426c896f7ef
+/deepseek-ai-dsh-experimental-session-tree-bundle:
+  en: c17b02189facc1e4
+  zh: 06200734ad2a4c22
+/deepseek-ai-dsh-experimental-session-tree-bundle/summary:
+  en: 810de4030b85cb7e
+  zh: beea9096efb47ac9
+/deepseek-ai-dsh-experimental-session-tree-bundle/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 364c80ee00a374ff
+/deepseek-ai-dsh-experimental-session-tree-bundle/use-this-package:
+  en: 8b9d4f86e28e9aca
+  zh: a90eedcfc0951242
+/deepseek-ai-dsh-experimental-session-tree-bundle/understand-the-implementation:
+  en: c52b310986bcd035
+  zh: bbee32a9c07b6bb4
+/deepseek-ai-dsh-experimental-session-tree-bundle/further-exploration:
+  en: c65d09e4703de0f1
+  zh: 2e16296253aaf7f5
+/deepseek-ai-dsh-experimental-session-tree-bundle/model-experience:
+  en: 80f1114a5a19aa26
+  zh: d79fbd16e4e60c57
+/deepseek-ai-dsh-experimental-session-tree-bundle/model-experience/kv-cache-effect:
+  en: 1e12aece066a39d2
+  zh: be2301a4626db482
+/deepseek-ai-dsh-experimental-session-tree-bundle/known-limitations-and-deferred-work:
+  en: e9a14231afc05b39
+  zh: b3d16c6232d4c1c1
+/deepseek-ai-dsh-experimental-session-tree-bundle/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 83780964e5de2f54

@@ -8,6 +8,8 @@ import { composeEntries, loadOverlayPatches } from '@deepseek-ai/dsh-app-boot'
 import { LlmAdapter, ToolCallId, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
 import type {} from '@deepseek-ai/dsh-agent-default-model'
 import type {} from '@deepseek-ai/dsh-session-query'
+import type {} from '@deepseek-ai/dsh-plugin-manager'
+import type {} from '@deepseek-ai/dsh-experimental-session-tree'
 import type {} from '@deepseek-ai/dsh-tool-present/types'
 import {
   assertFixtureInventory, captureStableAria, compareOrRefreshGolden,
@@ -20,10 +22,8 @@ const DIRECTORY = fileURLToPath(new URL('./expected/session-tree', import.meta.u
 const OVERLAY = fileURLToPath(new URL('./session-tree.overlay.yml', import.meta.url))
 const SOURCE_OVERLAY = fileURLToPath(new URL('../../../packages/experimental/session-tree/cordis.source.patch.yml', import.meta.url))
 const PICKER = fileURLToPath(new URL('./pin-browse-picker.overlay.yml', import.meta.url))
-const INSTALL_ANCHORS = [
-  fileURLToPath(new URL('../../../packages/experimental/session-tree/package.json', import.meta.url)),
-  fileURLToPath(new URL('../../../packages/experimental/client-ui-session-tree/package.json', import.meta.url)),
-]
+const BUNDLE = fileURLToPath(new URL('../../../packages/experimental/session-tree-bundle', import.meta.url))
+const BUNDLE_NAME = '@deepseek-ai/dsh-experimental-session-tree-bundle'
 const PROVIDER = 'session-tree-browser-test'
 const MODEL = 'delivery-plan'
 const PROMPT = 'Explore the delivery plan'
@@ -69,18 +69,19 @@ class DeliveryPlanAdapter extends LlmAdapter {
   }
 }
 
-it('opts into native message search without the scaffold search override', () => {
+it('adds only map rows without replacing native plugins or their search configuration', () => {
   const shipped = ['../../../packages/bundle/base/cordis.patch.yml', '../../../packages/bundle/web-app/cordis.patch.yml']
     .map(path => loadOverlayPatches('session-tree test', fileURLToPath(new URL(path, import.meta.url))))
   expect(composeEntries(shipped).find(entry => entry.id === 'session-query-sqlite')?.config)
     .toEqual({ path: ':memory:', openAt: 'never' })
   const warnings: string[] = []
-  const enabled = composeEntries([...shipped, loadOverlayPatches('session-tree test', SOURCE_OVERLAY)], warning => warnings.push(warning))
+  for (const path of [SOURCE_OVERLAY, join(BUNDLE, 'cordis.patch.yml')]) {
+    const enabled = composeEntries([...shipped, loadOverlayPatches('session-tree test', path)], warning => warnings.push(warning))
+    expect(enabled.filter(entry => !['session-tree', 'client-ui-session-tree'].includes(entry.id ?? '')))
+      .toEqual(composeEntries(shipped))
+    expect(enabled.filter(entry => ['session-tree', 'client-ui-session-tree'].includes(entry.id ?? ''))).toHaveLength(2)
+  }
   expect(warnings).toEqual([])
-  expect(enabled.find(entry => entry.id === 'session-query-sqlite')).toMatchObject({
-    name: '@deepseek-ai/dsh-session-query-sqlite',
-    config: { path: ':memory:', openAt: 'first-search' },
-  })
 })
 
 it.skipIf(MODE === 'record')('maps native forks and previews, searches messages, and shares conversation names without losing drafts', async () => {
@@ -88,7 +89,10 @@ it.skipIf(MODE === 'record')('maps native forks and previews, searches messages,
   onTestFinished(async () => {
     try { await resources.browser?.close() } finally { await resources.scaffold?.close() }
   })
-  const scaffold = await launchWebScaffold({ extraOverlayPath: [OVERLAY, PICKER], extraInstallAnchors: INSTALL_ANCHORS })
+  const scaffold = await launchWebScaffold({
+    extraOverlayPath: [OVERLAY, PICKER],
+    profile: { packages: [{ dir: BUNDLE, enabled: false }] },
+  })
   resources.scaffold = scaffold
   const adapter = new DeliveryPlanAdapter()
   scaffold.ctx.effect(() => scaffold.ctx.llm.registerAdapter([PROVIDER], adapter), 'session-tree browser model')
@@ -100,6 +104,13 @@ it.skipIf(MODE === 'record')('maps native forks and previews, searches messages,
   const tripwire = watchConsole(page)
   await page.goto(scaffold.authenticatedUrl, { waitUntil: 'load' })
   await connectFreshWorkspace(page, scaffold.workspaceCwd)
+  expect(scaffold.ctx.get('sessionTree')).toBeUndefined()
+  expect(await page.getByRole('button', { name: 'Conversation map', exact: true }).count()).toBe(0)
+  const installed = (await scaffold.ctx.pluginManager.listBundles()).find(bundle => bundle.name === BUNDLE_NAME)
+  expect(installed).toMatchObject({ installed: true, enabled: false, overrides: [] })
+  expect(installed?.rows.map(row => row.rowId)).toEqual(['session-tree', 'client-ui-session-tree'])
+  expect(await scaffold.ctx.pluginManager.setBundleEnabled(BUNDLE_NAME, true)).toMatchObject({ application: 'applied' })
+  await page.getByRole('navigation', { name: 'Global panels' }).getByRole('button', { name: 'Conversation map', exact: true }).waitFor()
   await writeFile(join(scaffold.workspaceCwd, 'workspace', 'report.txt'), 'Prepared delivery report.\n')
   const composer = page.locator('[data-composer-input]').last()
   await writeComposerDraft(page, composer, PROMPT)
@@ -213,6 +224,26 @@ it.skipIf(MODE === 'record')('maps native forks and previews, searches messages,
   expect(await nativeDetails.getByRole('textbox', { name: 'Conversation name', exact: true }).inputValue()).toBe(NATIVE_TITLE)
   await nativeDetails.getByRole('button', { name: 'Open conversation', exact: true }).click()
   await expect.poll(() => composer.innerText()).toBe(DRAFT)
+  // Recompose the installed bundle in the same process and browser document.
+  // Existing native Sessions and card summaries outlive both plugin halves.
+  const initialTimeOrigin = await page.evaluate(() => performance.timeOrigin)
+  for (let cycle = 0; cycle < 2; cycle++) {
+    await openMap.click()
+    expect(await scaffold.ctx.pluginManager.setBundleEnabled(BUNDLE_NAME, false)).toMatchObject({ application: 'applied' })
+    await map.waitFor({ state: 'detached' })
+    await expect.poll(() => page.getByRole('button', { name: 'Conversation map', exact: true }).count()).toBe(0)
+    expect(scaffold.ctx.get('sessionTree')).toBeUndefined()
+    expect(scaffold.ctx.sessions.get(rootId)).toBe(root)
+    expect(await sessionIds()).toEqual([rootId, child.id].sort())
+    expect(await scaffold.ctx.pluginManager.setBundleEnabled(BUNDLE_NAME, true)).toMatchObject({ application: 'applied' })
+    await openMap.waitFor()
+    await openMap.click()
+    await rootCard.getByText(SUMMARY, { exact: true }).waitFor()
+    await rootCard.getByRole('button', { name: `Open conversation: ${NATIVE_TITLE}`, exact: true }).click()
+    await expect.poll(() => composer.innerText()).toBe(DRAFT)
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(initialTimeOrigin)
+    expect(await page.getByRole('button', { name: 'Conversation map', exact: true }).count()).toBe(2)
+  }
   expect(await sessionIds()).toEqual([rootId, child.id].sort())
   expect(adapter.requests).toHaveLength(2)
   expect(tripwire.pageErrors).toEqual([])

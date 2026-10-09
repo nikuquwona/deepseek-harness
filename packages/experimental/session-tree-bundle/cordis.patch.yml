@@ -1,0 +1,5 @@
+- insert:
+    - id: session-tree
+      name: '@deepseek-ai/dsh-experimental-session-tree'
+    - id: client-ui-session-tree
+      name: '@deepseek-ai/dsh-experimental-client-ui-session-tree'

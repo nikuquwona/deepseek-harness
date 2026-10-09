@@ -207,9 +207,9 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'completion of the current or newly started refresh.',
       },
       {
-        signature: 'search( query: string, signal: AbortSignal, mode?: \'phrase\' | \'literal\', ): Promise<RemoteResult<{ items: SessionSearchResultItem[]; hasMore: boolean }>>',
+        signature: 'search( query: string, signal: AbortSignal, ): Promise<RemoteResult<{ items: SessionSearchResultItem[]; hasMore: boolean }>>',
         description: 'Search the Host\'s visible message-content index. Results stay request-local; the list snapshot remains the metadata authority.',
-        parameters: [{ name: 'query', description: 'non-blank search text.' }, { name: 'signal', description: 'cancellation for a superseded search.' }, { name: 'mode', description: 'native matching semantics; omitted retains phrase search.' }],
+        parameters: [{ name: 'query', description: 'non-blank literal phrase.' }, { name: 'signal', description: 'cancellation for a superseded search.' }],
         returns: 'bounded results, or a business/transport error.',
       },
       {

@@ -1,9 +1,4 @@
 # pnpm dsh web --patch packages/experimental/session-tree/cordis.source.patch.yml
-# The map opts into native message search; the index opens on the first query.
-- id: session-query-sqlite
-  config:
-    path: ':memory:'
-    openAt: first-search
 - insert:
     - id: session-tree
       name: './src/index.ts'
