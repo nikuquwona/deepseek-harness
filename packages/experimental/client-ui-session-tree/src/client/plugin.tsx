@@ -83,7 +83,7 @@ function registerTree(ctx: Context): void {
     open: (id) => { ctx.uiWorkspace.openSession(id) },
     create: () => { ctx.uiWorkspace.startSession() },
     search: async (query,signal) => {
-      const result = await ctx.sessions.search(query,signal)
+      const result = await ctx.sessions.search(query,signal,'literal')
       if (!result.ok) throw result.error
       return result.value
     },

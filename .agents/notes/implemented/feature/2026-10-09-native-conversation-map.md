@@ -14,7 +14,7 @@ The optional [Session Tree host](../../../../packages/experimental/session-tree/
 
 Conversation names remain native Session titles, including names edited from a card. The map owns summary annotations, presentation state, and result previews. The current native session determines the highlighted ancestor path. Native Pin, workspace navigation, approvals, tools, and deliverables retain their existing ownership. Independent branches share the original workspace; conversation ancestry does not snapshot files or copy provider KV tensors.
 
-The initial view scopes to the connected exploration. Search combines card text with native message-content search and includes hidden conversations. Selecting a result restores a readable scale; a zoomed-out overview keeps names legible and hides secondary detail. Disclosure reduces visible detail without removing saved sessions. Previews prioritize declared files and distinguish text references from verified external outcomes.
+The initial view scopes to the connected exploration. Search combines card text with native message-content search and includes hidden conversations. The map selects an optional native literal mode so Chinese fragments and short remembered words can match inside messages; existing callers retain phrase matching. Literal matching scans the existing derived documents and creates no second message store. Selecting a result restores a readable scale; a zoomed-out overview keeps names legible and hides secondary detail. Disclosure reduces visible detail without removing saved sessions. Previews prioritize declared files and distinguish text references from verified external outcomes.
 
 ## Alternatives considered
 
@@ -32,4 +32,4 @@ The map gives up an always-visible overview and direct artifact editing. A prese
 
 ## Testing
 
-Host composition tests exercise native recursive forks, prefix preservation, annotation persistence, changing log revisions, provider replacement, cancellation, and unload. UI tests exercise native navigation, disclosure, search, and retention of unsaved annotation edits after failure. The keyless scripted example supplies a reproducible assembled experience without a provider credential.
+Host composition tests exercise native recursive forks, prefix preservation, annotation persistence, changing log revisions, provider replacement, cancellation, and unload. UI tests exercise native navigation, disclosure, search, and retention of unsaved annotation edits after failure. An assembled Web regression searches Chinese substrings, a single character, and case-insensitive English content absent from card titles and summaries. The keyless scripted example supplies a reproducible assembled experience without a provider credential.

@@ -36,6 +36,7 @@ const REPLY = `Delivery plan ready.
 
 \`\`\`mermaid
 flowchart TD
+  %% 评审递归分支 B：进一步验证缓存失效测试。
   Idea --> Explore
   Explore --> Report
 \`\`\`
@@ -130,14 +131,16 @@ it.skipIf(MODE === 'record')('maps native forks and previews, searches messages,
   expect(await sessionIds()).toEqual([rootId])
 
   await openMap.click()
-  expect(await rootCard.innerText()).not.toContain('flowchart')
-  await map.getByRole('textbox', { name: 'Find a conversation', exact: true }).fill('flowchart')
   const results = map.getByRole('region', { name: 'Matching conversations', exact: true })
   const bodyMatch = results.getByRole('button', { name: PROMPT, exact: true })
-  await bodyMatch.waitFor()
-  expect(await bodyMatch.innerText()).toContain('flowchart')
-  await bodyMatch.click()
-  await results.waitFor({ state: 'detached' })
+  for (const query of ['递归分支', '失效', '效', 'FLOWCHART']) {
+    expect((await rootCard.innerText()).toLowerCase()).not.toContain(query.toLowerCase())
+    await map.getByRole('textbox', { name: 'Find a conversation', exact: true }).fill(query)
+    await bodyMatch.waitFor({ timeout: 10_000 })
+    expect((await bodyMatch.innerText()).toLowerCase()).toContain(query.toLowerCase())
+    await bodyMatch.click()
+    await results.waitFor({ state: 'detached' })
+  }
   await rootCard.getByRole('button', { name: 'Details', exact: true }).click()
   const details = page.getByRole('dialog', { name: PROMPT, exact: true })
   const diagram = details.getByRole('img', { name: 'Diagram preview', exact: true })

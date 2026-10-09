@@ -247,10 +247,15 @@ export interface SessionSearchExecContext {
   signal?: AbortSignal
 }
 
-/** Cross-session full-text search request. */
+/** Phrase token matching or case-insensitive, whitespace-flexible literal substring matching. */
+export type SessionSearchMode = 'phrase' | 'literal'
+
+/** Cross-session search request. */
 export interface SessionSearchRequest {
   /** Full-text query interpreted as data, never executable FTS syntax. */
   query: string
+  /** Matching semantics; omitted selects the provider's phrase search. */
+  mode?: SessionSearchMode
   /** Logical-session predicates applied before event ranking. */
   sessionFilters?: readonly SessionResultFilter[]
   /** Event predicates applied before event ranking. */
@@ -261,12 +266,14 @@ export interface SessionSearchRequest {
   cursor?: SessionSearchCursor
 }
 
-/** Within-session full-text search request. */
+/** Within-session search request. */
 export interface SessionEventSearchRequest {
   /** Session whose live-preferred logical log is searched. */
   sessionId: SessionId
   /** Full-text query interpreted as data, never executable FTS syntax. */
   query: string
+  /** Matching semantics; omitted selects the provider's phrase search. */
+  mode?: SessionSearchMode
   /** Event predicates applied before ranking. */
   filters?: readonly SessionEventMetadataFilter[]
   /** Maximum events in this page. */

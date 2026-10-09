@@ -110,13 +110,15 @@ export interface ISessions {
   /**
    * Search the Host's visible message-content index. Results stay
    * request-local; the list snapshot remains the metadata authority.
-   * @param query - non-blank literal phrase.
+   * @param query - non-blank search text.
    * @param signal - cancellation for a superseded search.
+   * @param mode - native matching semantics; omitted retains phrase search.
    * @returns bounded results, or a business/transport error.
    */
   search(
     query: string,
     signal: AbortSignal,
+    mode?: 'phrase' | 'literal',
   ): Promise<RemoteResult<{ items: SessionSearchResultItem[]; hasMore: boolean }>>
   /**
    * Fork a session from an exact inclusive prefix of the source; on

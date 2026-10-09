@@ -1763,6 +1763,11 @@
     },
     {
       "doc": "docs/subsystems/session-query.md",
+      "symbol": "SessionSearchMode",
+      "source": "packages/session-query/session-query/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
       "symbol": "SessionSearchRequest",
       "source": "packages/session-query/session-query/src/types.ts"
     },

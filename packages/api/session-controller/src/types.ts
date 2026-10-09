@@ -273,6 +273,8 @@ export interface SessionListValue {
 /** Session search request. */
 export interface SessionSearchRequest {
   readonly query: string
+  /** Native phrase search by default; literal scans case-insensitive, whitespace-flexible substrings. */
+  readonly mode?: 'phrase' | 'literal'
 }
 
 /** Session search response value. */

@@ -2,6 +2,7 @@
 
 import {
   SessionQueryError,
+  compileSessionTextFilter,
   materializeSessionEventResultFilters,
   materializeSessionResultFilters,
 } from '@deepseek-ai/dsh-session-query'
@@ -13,6 +14,7 @@ import type {
   SessionResultFilter,
   SessionSearchCursor,
   SessionSearchRequest,
+  SessionSearchMode,
 } from '@deepseek-ai/dsh-session-query'
 
 /** Collision-free marker inserted before an FTS5 match by `highlight()`. */
@@ -66,6 +68,7 @@ export interface QueryLimits {
 /** Normalized cross-session request. */
 export interface NormalizedSessionRequest {
   query: string
+  mode: SessionSearchMode
   sessionFilters: readonly SessionResultFilter[]
   eventFilters: readonly SessionEventMetadataFilter[]
   limit: number
@@ -76,6 +79,7 @@ export interface NormalizedSessionRequest {
 export interface NormalizedEventRequest {
   sessionId: SessionEventSearchRequest['sessionId']
   query: string
+  mode: SessionSearchMode
   filters: readonly SessionEventMetadataFilter[]
   limit: number
   cursor?: SessionSearchCursor
@@ -106,6 +110,7 @@ export function normalizeSessionRequest(
   const cursor = materializeCursor(request.cursor)
   return {
     query: normalizeQuery(request.query),
+    mode: normalizeMode(request.mode),
     sessionFilters,
     eventFilters,
     limit: normalizeLimit(request.limit, limits),
@@ -131,6 +136,7 @@ export function normalizeEventRequest(
   return {
     sessionId: request.sessionId,
     query: normalizeQuery(request.query),
+    mode: normalizeMode(request.mode),
     filters,
     limit: normalizeLimit(request.limit, limits),
     ...cursor === undefined ? {} : { cursor },
@@ -225,6 +231,20 @@ export function quoteFtsData(query: string): string {
 }
 
 /**
+ * Compile the shared literal scan and mark its non-overlapping matches in original text.
+ * @param query - normalized literal query, with punctuation treated as data.
+ * @returns a reusable matcher returning marked text, or null for no match.
+ */
+export function createLiteralHighlighter(query: string): (text: string) => string | null {
+  const literal = compileSessionTextFilter(query)
+  const pattern = new RegExp(literal.source, `${literal.flags}g`)
+  return (text) => {
+    const marked = text.replace(pattern, match => `${FTS_HIGHLIGHT_START}${match}${FTS_HIGHLIGHT_END}`)
+    return marked === text ? null : marked
+  }
+}
+
+/**
  * Remove reserved marker collisions before text enters FTS5 or MATCH.
  * @param text - extracted document text or normalized caller query.
  * @returns text with reserved noncharacters mapped to replacement characters.
@@ -247,6 +267,7 @@ export function requestFingerprint(request: NormalizedSessionRequest | Normalize
       scope: 'events',
       sessionId: request.sessionId,
       query: request.query,
+      mode: request.mode,
       filters: canonicalFilters(request.filters),
       limit: request.limit,
     })
@@ -254,6 +275,7 @@ export function requestFingerprint(request: NormalizedSessionRequest | Normalize
   return JSON.stringify({
     scope: 'sessions',
     query: request.query,
+    mode: request.mode,
     sessionFilters: canonicalFilters(request.sessionFilters),
     eventFilters: canonicalFilters(request.eventFilters),
     limit: request.limit,
@@ -313,6 +335,12 @@ function normalizeMarkedText(markedText: string): { text: string; matchStart: nu
     text: characters.join(''),
     matchStart: matchStart ?? 0,
   }
+}
+
+function normalizeMode(value: unknown): SessionSearchMode {
+  if (value === undefined) return 'phrase'
+  if (value === 'phrase' || value === 'literal') return value
+  throw new SessionQueryError('session-search mode must be phrase or literal', 'SESSION_QUERY_INVALID_QUERY')
 }
 
 function normalizeQuery(value: string): string {

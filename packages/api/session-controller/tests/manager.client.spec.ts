@@ -675,7 +675,7 @@ describe('list lifecycle', () => {
 })
 
 describe('search', () => {
-  it('returns bounded Host results and forwards the caller signal', async ({ mock, remote }) => {
+  it.for([undefined, 'literal'] as const)('returns bounded Host results and forwards the caller signal and %s mode', async (mode, { mock, remote }) => {
     remote.session.search.mockResolvedValue(ok({
       items: [{ sessionId: S1, snippet: 'matching excerpt' }],
       hasMore: true,
@@ -683,14 +683,14 @@ describe('search', () => {
     const manager = makeManager(mock, remote)
     const signal = new AbortController().signal
 
-    await expect(manager.search('exact phrase', signal)).resolves.toEqual({
+    await expect(manager.search('exact phrase', signal, mode)).resolves.toEqual({
       ok: true,
       value: {
         items: [{ sessionId: S1, snippet: 'matching excerpt' }],
         hasMore: true,
       },
     })
-    expect(remote.session.search).toHaveBeenCalledExactlyOnceWith({ query: 'exact phrase' }, signal)
+    expect(remote.session.search).toHaveBeenCalledExactlyOnceWith({ query: 'exact phrase', ...mode === undefined ? {} : { mode } }, signal)
   })
 
   it('preserves business errors and propagates a non-Remote throw', async ({ mock, remote }) => {

@@ -357,15 +357,17 @@ export class ClientSessions implements ISessions {
   /**
    * Search the Host's visible message-content index. Results stay
    * request-local; the list snapshot remains the metadata authority.
-   * @param query - non-blank literal phrase.
+   * @param query - non-blank search text.
    * @param signal - cancellation for a superseded search.
+   * @param mode - native matching semantics; omitted retains phrase search.
    * @returns bounded results or a business/transport error.
    */
   search(
     query: string,
     signal: AbortSignal,
+    mode?: 'phrase' | 'literal',
   ): Promise<RemoteResult<{ items: SessionSearchResultItem[]; hasMore: boolean }>> {
-    return this.manager.search(query, signal)
+    return this.manager.search(query, signal, mode)
   }
 
   /**

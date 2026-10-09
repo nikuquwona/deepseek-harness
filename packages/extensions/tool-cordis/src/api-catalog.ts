@@ -6713,7 +6713,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SessionEventSearchRequest',
-    declaration: 'export interface SessionEventSearchRequest {\n    sessionId: SessionId;\n    query: string;\n    filters?: readonly SessionEventMetadataFilter[];\n    limit?: number;\n    cursor?: SessionSearchCursor;\n}',
+    declaration: 'export interface SessionEventSearchRequest {\n    sessionId: SessionId;\n    query: string;\n    mode?: SessionSearchMode;\n    filters?: readonly SessionEventMetadataFilter[];\n    limit?: number;\n    cursor?: SessionSearchCursor;\n}',
   },
   {
     name: 'SessionEventSurface',
@@ -7002,6 +7002,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SessionSearchItem',
     declaration: 'export interface SessionSearchItem {\n    readonly sessionId: SessionId;\n    readonly snippet: string;\n}',
+  },
+  {
+    name: 'SessionSearchMode',
+    declaration: 'export type SessionSearchMode = \'phrase\' | \'literal\';',
   },
   {
     name: 'SessionSearchPage',
