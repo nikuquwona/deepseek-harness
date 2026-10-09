@@ -100,6 +100,21 @@ it('finds message content through native search and makes the selected card read
   expect(value.create).not.toHaveBeenCalled()
 })
 
+it('leaves search-result scrolling to the list while wheel gestures still pan the canvas', () => {
+  const value = fixture()
+  fireEvent.change(screen.getByRole('textbox',{ name:en.search }),{ target:{ value:'Result' } })
+  const before = value.view.getSnapshot()
+  const listWheel = new WheelEvent('wheel',{ bubbles:true,cancelable:true,deltaY:80 })
+  fireEvent(screen.getByRole('region',{ name:en.searchResults }),listWheel)
+  expect(listWheel.defaultPrevented).toBe(false)
+  expect(value.view.getSnapshot()).toEqual(before)
+
+  const mapWheel = new WheelEvent('wheel',{ bubbles:true,cancelable:true,deltaY:60 })
+  fireEvent(screen.getByRole('region',{ name:en.canvas }),mapWheel)
+  expect(mapWheel.defaultPrevented).toBe(true)
+  expect(value.view.getSnapshot().y).toBe(before.y - 60)
+})
+
 it('cancels superseded content queries and distinguishes unavailable search from no matches', async () => {
   const value = fixture()
   let resolveOld: (result: Awaited<ReturnType<TreeInjected['search']>>) => void = () => { throw new Error('Search not started') }

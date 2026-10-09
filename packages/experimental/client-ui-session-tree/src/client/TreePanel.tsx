@@ -168,68 +168,71 @@ export function TreePanel(props: TreePanelProps) {
       </div>
     </div>
     {state.error !== null && <div className={css.error} role="alert">{t('failed')}<Button size="sm" onClick={() => { void props.refresh() }}>{t('retry')}</Button><details><summary>{t('errorDetails')}</summary>{state.error}</details></div>}
-    <div ref={viewport} className={css.viewport} tabIndex={0} role="region" aria-label={t('canvas')}
-      onPointerDown={(event) => {
-        if (event.button !== 0 || (event.target instanceof Element && event.target.closest('article,button,input'))) return
-        drag.current = { x: event.clientX, y: event.clientY, originX: view.x, originY: view.y }
-        event.currentTarget.setPointerCapture(event.pointerId)
-      }}
-      onPointerMove={(event) => {
-        if (drag.current) actions.viewport(drag.current.originX + event.clientX - drag.current.x,
-          drag.current.originY + event.clientY - drag.current.y, view.zoom)
-      }}
-      onPointerUp={() => { drag.current = null }} onPointerCancel={() => { drag.current = null }}
-      onKeyDown={(event) => {
-        if (event.target !== event.currentTarget) return
-        const delta = 60
-        if (event.key === 'ArrowLeft') actions.viewport(view.x + delta, view.y, view.zoom)
-        else if (event.key === 'ArrowRight') actions.viewport(view.x - delta, view.y, view.zoom)
-        else if (event.key === 'ArrowUp') actions.viewport(view.x, view.y + delta, view.zoom)
-        else if (event.key === 'ArrowDown') actions.viewport(view.x, view.y - delta, view.zoom)
-        else return
-        event.preventDefault()
-      }}>
-      {state.tree.nodes.length === 0 ? <div className={css.empty}>
-        {state.loading ? <span role="status" aria-label={t('loading')}><StateDot state="ongoing" size={24} /></span>
-          : <><IconBranchOutlineRegular size={32} /><h2>{t('empty')}</h2><p>{t('emptyBody')}</p></>}
-      </div> : <div className={clsx(css.world, view.zoom < 0.55 && css.overview)} style={{
-        '--tree-x': `${view.x}px`, '--tree-y': `${view.y}px`, '--tree-zoom': view.zoom,
-        '--tree-title-lines': Math.max(1,Math.min(4,Math.floor((CARD.height * view.zoom - 12) / 16.2))),
-      } as LocalStyle}>
-        <svg className={css.edges} aria-hidden="true">
-          {placed.map((item) => {
-            const parent = item.node.parentId === null ? undefined : positions.get(item.node.parentId)
-            if (!parent) return null
-            const x1 = parent.x + CARD.width / 2, y1 = parent.y + CARD.height
-            const x2 = item.x + CARD.width / 2, y2 = item.y
-            return <path key={item.node.sessionId} d={`M${x1},${y1} V${y2-CARD.gapY/2} H${x2} V${y2}`}
-              className={currentPath.has(item.node.sessionId) ? css.currentEdge : undefined} />
+    <div className={css.stage}>
+      <div ref={viewport} className={css.viewport} tabIndex={0} role="region" aria-label={t('canvas')}
+        onPointerDown={(event) => {
+          if (event.button !== 0 || (event.target instanceof Element && event.target.closest('article,button,input'))) return
+          drag.current = { x: event.clientX, y: event.clientY, originX: view.x, originY: view.y }
+          event.currentTarget.setPointerCapture(event.pointerId)
+        }}
+        onPointerMove={(event) => {
+          if (drag.current) actions.viewport(drag.current.originX + event.clientX - drag.current.x,
+            drag.current.originY + event.clientY - drag.current.y, view.zoom)
+        }}
+        onPointerUp={() => { drag.current = null }} onPointerCancel={() => { drag.current = null }}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return
+          const delta = 60
+          if (event.key === 'ArrowLeft') actions.viewport(view.x + delta, view.y, view.zoom)
+          else if (event.key === 'ArrowRight') actions.viewport(view.x - delta, view.y, view.zoom)
+          else if (event.key === 'ArrowUp') actions.viewport(view.x, view.y + delta, view.zoom)
+          else if (event.key === 'ArrowDown') actions.viewport(view.x, view.y - delta, view.zoom)
+          else return
+          event.preventDefault()
+        }}>
+        {state.tree.nodes.length === 0 ? <div className={css.empty}>
+          {state.loading ? <span role="status" aria-label={t('loading')}><StateDot state="ongoing" size={24} /></span>
+            : <><IconBranchOutlineRegular size={32} /><h2>{t('empty')}</h2><p>{t('emptyBody')}</p></>}
+        </div> : <div className={clsx(css.world, view.zoom < 0.55 && css.overview)} style={{
+          '--tree-x': `${view.x}px`, '--tree-y': `${view.y}px`, '--tree-zoom': view.zoom,
+          '--tree-title-lines': Math.max(1,Math.min(4,Math.floor((CARD.height * view.zoom - 12) / 16.2))),
+        } as LocalStyle}>
+          <svg className={css.edges} aria-hidden="true">
+            {placed.map((item) => {
+              const parent = item.node.parentId === null ? undefined : positions.get(item.node.parentId)
+              if (!parent) return null
+              const x1 = parent.x + CARD.width / 2, y1 = parent.y + CARD.height
+              const x2 = item.x + CARD.width / 2, y2 = item.y
+              return <path key={item.node.sessionId} d={`M${x1},${y1} V${y2-CARD.gapY/2} H${x2} V${y2}`}
+                className={currentPath.has(item.node.sessionId) ? css.currentEdge : undefined} />
+            })}
+          </svg>
+          {placed.map(({ node,x,y }) => {
+            const parent = node.parentId === null ? undefined : byId.get(node.parentId)
+            const count = children.get(node.sessionId) ?? 0
+            return <article key={node.sessionId} className={clsx(css.card, node.sessionId === currentId && css.currentCard,
+              normalized && !matches.includes(node) && css.dimmed)}
+            style={{ '--tree-card-x': `${x}px`, '--tree-card-y': `${y}px` } as LocalStyle} data-session-id={node.sessionId}>
+              <div className={css.cardMeta}>
+                {parent ? <button type="button" onClick={() => { open(parent.sessionId) }}>{t('from',{ title:parent.title || t('untitled') })}</button> : <span />}
+                <span>{node.running ? t('running') : node.sessionId === currentId ? t('current') : ''}</span>
+              </div>
+              <button type="button" className={css.cardSelect} title={node.title || t('untitled')} onClick={() => { open(node.sessionId) }} aria-label={t('openNamed',{ title:node.title || t('untitled') })}>
+                <h2>{node.title || t('untitled')}</h2><p>{node.summary || t('noSummary')}</p>
+              </button>
+              {node.artifacts.length > 0 && <div className={css.artifactStrip}>{node.artifacts.slice(-2).map(artifact => <button key={`${artifact.kind}:${artifact.seq}:${artifact.label}`} type="button" className={artifact.kind === 'diagram' ? css.diagramTile : undefined} onClick={() => { actions.select(node.sessionId) }} aria-label={t('previewNamed',{ title:artifact.label })}>
+                {artifact.kind === 'diagram' ? <DiagramPreview source={artifact.content} label={t('diagram')} colorScheme={colorScheme} />
+                  : <><span>{artifactLabel(artifact,t)} · {artifact.label}</span><span>{artifact.content}</span></>}
+              </button>)}</div>}
+              <footer className={css.cardFooter}>
+                {count > 0 && <Button size="sm" aria-expanded={!view.collapsed.includes(node.sessionId)} onClick={() => { actions.collapse(node.sessionId) }}>{view.collapsed.includes(node.sessionId) ? t('expand',{ count }) : t('collapse')}</Button>}
+                <Button size="sm" className={css.detailsButton} onClick={() => { actions.select(node.sessionId) }}>{t('details')}</Button>
+              </footer>
+            </article>
           })}
-        </svg>
-        {placed.map(({ node,x,y }) => {
-          const parent = node.parentId === null ? undefined : byId.get(node.parentId)
-          const count = children.get(node.sessionId) ?? 0
-          return <article key={node.sessionId} className={clsx(css.card, node.sessionId === currentId && css.currentCard,
-            normalized && !matches.includes(node) && css.dimmed)}
-          style={{ '--tree-card-x': `${x}px`, '--tree-card-y': `${y}px` } as LocalStyle} data-session-id={node.sessionId}>
-            <div className={css.cardMeta}>
-              {parent ? <button type="button" onClick={() => { open(parent.sessionId) }}>{t('from',{ title:parent.title || t('untitled') })}</button> : <span />}
-              <span>{node.running ? t('running') : node.sessionId === currentId ? t('current') : ''}</span>
-            </div>
-            <button type="button" className={css.cardSelect} title={node.title || t('untitled')} onClick={() => { open(node.sessionId) }} aria-label={t('openNamed',{ title:node.title || t('untitled') })}>
-              <h2>{node.title || t('untitled')}</h2><p>{node.summary || t('noSummary')}</p>
-            </button>
-            {node.artifacts.length > 0 && <div className={css.artifactStrip}>{node.artifacts.slice(-2).map(artifact => <button key={`${artifact.kind}:${artifact.seq}:${artifact.label}`} type="button" className={artifact.kind === 'diagram' ? css.diagramTile : undefined} onClick={() => { actions.select(node.sessionId) }} aria-label={t('previewNamed',{ title:artifact.label })}>
-              {artifact.kind === 'diagram' ? <DiagramPreview source={artifact.content} label={t('diagram')} colorScheme={colorScheme} />
-                : <><span>{artifactLabel(artifact,t)} · {artifact.label}</span><span>{artifact.content}</span></>}
-            </button>)}</div>}
-            <footer className={css.cardFooter}>
-              {count > 0 && <Button size="sm" aria-expanded={!view.collapsed.includes(node.sessionId)} onClick={() => { actions.collapse(node.sessionId) }}>{view.collapsed.includes(node.sessionId) ? t('expand',{ count }) : t('collapse')}</Button>}
-              <Button size="sm" className={css.detailsButton} onClick={() => { actions.select(node.sessionId) }}>{t('details')}</Button>
-            </footer>
-          </article>
-        })}
-      </div>}
+        </div>}
+      </div>
+      {/* Search results scroll independently of the canvas gesture surface. */}
       {normalized && <div className={css.searchResults} role="region" aria-label={t('searchResults')}>
         {matches.map(node => <button type="button" key={node.sessionId} className={css.searchResult} onClick={() => { focus(node.sessionId) }}
           aria-label={node.title || t('untitled')} aria-description={contentHits.get(node.sessionId)}>
