@@ -1100,6 +1100,36 @@ Types: [CreateSessionOptions](persistence.zh.md) · [PrepareSessionOptions](pers
 
 Source: [`packages/core/session/src/index.ts`](../../packages/core/session/src/index.ts)
 
+<a id="ctxsessiontree--sessiontree"></a>
+
+### `ctx.sessionTree` — `SessionTree`
+
+A plugin-owned sidecar for trees whose ancestry lives in native Session headers.
+
+```ts cordis-catalog
+/**
+ * Read ordinary Session cards, including cold Sessions and unannotated native forks.
+ * Cached previews require the same live Session and cursor, or the same persistence
+ * instance and durable revision. A source without a usable revision is read again.
+ * @param signal - cancellation for persistence reads.
+ * @returns a forest whose parent ids always come from native Session headers.
+ */
+@Remote list(signal: AbortSignal): Promise<TreeSnapshot>
+
+/**
+ * Rename the native Session and save its card summary without issuing a model request.
+ * @param sessionId - an existing native Session.
+ * @param title - required native title, normalized by the Session Controller.
+ * @param summary - custom summary; empty selects the automatic excerpt.
+ * @returns the saved summary; the accepted title is read from the native Session.
+ */
+@Remote annotate(sessionId: SessionId, title: string, summary: string): Promise<TreeAnnotation>
+```
+
+Types: [SessionId](core.zh.md)
+
+Source: [`packages/experimental/session-tree/src/index.ts`](../../packages/experimental/session-tree/src/index.ts)
+
 <a id="api-session-events"></a>
 
 ### `api-session/*` events

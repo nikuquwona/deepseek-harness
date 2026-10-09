@@ -1,0 +1,30 @@
+- region "Conversation map":
+  - heading "Conversation map" [level=1]
+  - paragraph: Open a conversation to continue. Explore another direction from a reply in chat.
+  - button "Back to conversation"
+  - button "New conversation"
+  - text: This exploration 2
+  - button "Show all"
+  - textbox "Find a conversation"
+  - button "Zoom out": −
+  - text: 100%
+  - button "Zoom in": +
+  - button "Fit map"
+  - button "Refresh"
+  - region "Conversation map. Drag empty space to pan; use the zoom controls to scale.":
+    - article:
+      - 'button "Open conversation: Explore the delivery plan"':
+        - heading "Explore the delivery plan" [level=2]
+        - paragraph: "Delivery plan ready. PR reference: https://github.com/example/project/pull/17"
+      - 'button "Preview: Mermaid"':
+        - img "Diagram preview"
+      - 'button "Preview: project/pull/17"': PR reference · project/pull/17 https://github.com/example/project/pull/17
+      - button "Collapse explorations" [expanded]
+      - button "Details"
+    - article:
+      - button "From · Explore the delivery plan"
+      - text: Current
+      - 'button "Open conversation: Explore the delivery plan (1)"':
+        - heading "Explore the delivery plan (1)" [level=2]
+        - paragraph: Ready for a new exploration
+      - button "Details"

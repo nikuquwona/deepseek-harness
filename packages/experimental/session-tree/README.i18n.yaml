@@ -1,0 +1,46 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/experimental/session-tree/README.md
+/:
+  en: c1c516e99d15a39a
+  zh: 7b358c78d8dd5bc6
+/deepseek-ai-dsh-experimental-session-tree:
+  en: 6d52b478a105e547
+  zh: 2ebca74745df3f09
+/deepseek-ai-dsh-experimental-session-tree/summary:
+  en: a22eb1306d93be27
+  zh: 4ac2984a1989adf7
+/deepseek-ai-dsh-experimental-session-tree/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 988e839059414d27
+/deepseek-ai-dsh-experimental-session-tree/use-this-package:
+  en: 83ad44a42fdd27f3
+  zh: c99176191faa5871
+/deepseek-ai-dsh-experimental-session-tree/understand-the-implementation:
+  en: c1a4eba7a10cb4cb
+  zh: 445c68338ffadd52
+/deepseek-ai-dsh-experimental-session-tree/further-exploration:
+  en: 70e1533419f55182
+  zh: d482ce8037ba565f
+/deepseek-ai-dsh-experimental-session-tree/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-experimental-session-tree/model-experience/inherited-conversation-prefix:
+  en: efc5af603cd4dcc9
+  zh: 93035bb6003c8039
+/deepseek-ai-dsh-experimental-session-tree/model-experience/inherited-conversation-prefix/what-the-model-sees:
+  en: e4d9a6d9f9b03aef
+  zh: 8bd64a5cef237eba
+/deepseek-ai-dsh-experimental-session-tree/model-experience/inherited-conversation-prefix/token-effect:
+  en: ddb7efb8599a7227
+  zh: 6c8b25eda3de9b70
+/deepseek-ai-dsh-experimental-session-tree/model-experience/inherited-conversation-prefix/kv-cache-effect:
+  en: 7846fb41ffab8df5
+  zh: 60afaccdb3fad03f
+/deepseek-ai-dsh-experimental-session-tree/known-limitations-and-deferred-work:
+  en: 65debad216b82e53
+  zh: 5819bddeab5e036c
+/deepseek-ai-dsh-experimental-session-tree/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

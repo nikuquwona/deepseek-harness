@@ -70,6 +70,7 @@
     "tests/input-plugin-extensions.e2e.ts",
     "tests/plugin-manager.e2e.ts",
     "tests/session-inspector.e2e.ts",
+    "tests/session-tree.expected.e2e.ts",
     "tests/shared-inspector.e2e.ts",
     "tests/devtools-frontend.e2e.ts",
     "tests/inspector-panels.e2e.ts",

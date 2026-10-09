@@ -1,0 +1,49 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/experimental/client-ui-session-tree/README.md
+/:
+  en: 8da948cf1ef69350
+  zh: 23f23c34407b8dc6
+/deepseek-ai-dsh-experimental-client-ui-session-tree:
+  en: 0793e5cad783265a
+  zh: 270c42ed5016773b
+/deepseek-ai-dsh-experimental-client-ui-session-tree/summary:
+  en: ae125fae3abae869
+  zh: b6d1a66976300a4f
+/deepseek-ai-dsh-experimental-client-ui-session-tree/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 988e839059414d27
+/deepseek-ai-dsh-experimental-client-ui-session-tree/use-this-package:
+  en: ec970c8885f697b6
+  zh: ff63f1ab8d484443
+/deepseek-ai-dsh-experimental-client-ui-session-tree/use-this-package/try-without-an-api-key:
+  en: e7cbb474c4eda969
+  zh: 4acb15eba3918db1
+/deepseek-ai-dsh-experimental-client-ui-session-tree/understand-the-implementation:
+  en: fb552cedd82dc36d
+  zh: bd67918cf82ce3d1
+/deepseek-ai-dsh-experimental-client-ui-session-tree/further-exploration:
+  en: 78fd938b55962ebc
+  zh: 3940fa30c23cfdd7
+/deepseek-ai-dsh-experimental-client-ui-session-tree/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-experimental-client-ui-session-tree/model-experience/native-conversation-navigation:
+  en: d9ab44f689d3904d
+  zh: 2c9cd5bab31075a2
+/deepseek-ai-dsh-experimental-client-ui-session-tree/model-experience/native-conversation-navigation/what-the-model-sees:
+  en: 684518a6e2330bb7
+  zh: 99f823480a4163d4
+/deepseek-ai-dsh-experimental-client-ui-session-tree/model-experience/native-conversation-navigation/token-effect:
+  en: f15aa801b7bf4b7e
+  zh: e465ff3995ee89c3
+/deepseek-ai-dsh-experimental-client-ui-session-tree/model-experience/native-conversation-navigation/kv-cache-effect:
+  en: f1108ff6b50b9e9f
+  zh: 5742a0da439a5a4f
+/deepseek-ai-dsh-experimental-client-ui-session-tree/known-limitations-and-deferred-work:
+  en: 6d876d7f47d9bd4a
+  zh: e83231ca84415558
+/deepseek-ai-dsh-experimental-client-ui-session-tree/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

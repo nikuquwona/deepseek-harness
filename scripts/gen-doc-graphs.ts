@@ -253,6 +253,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Owns Session commands, cold reads, durable-event following, live control state, model catalogs, workspace opening, and Agent activation policy.',
   },
   {
+    key: 'sessionTree',
+    pkg: 'experimental-session-tree',
+    title: 'Optional native Session tree projection',
+    mode: 'service',
+    consumers: ['experimental-client-ui-session-tree'],
+    note: 'Reads native ancestry and committed results; owns card summaries and delegates naming to native Session titles. Session creation and interaction remain with the native Session Controller and conversation UI.',
+  },
+  {
     key: 'sessionFileReferences',
     pkg: 'api-session-controller',
     title: 'Session-addressed file-reference Remote adapter',

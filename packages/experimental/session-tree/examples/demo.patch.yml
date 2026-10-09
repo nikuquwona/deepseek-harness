@@ -1,0 +1,10 @@
+# Apply after ../cordis.source.patch.yml, with an isolated DSH_HOME.
+- id: agent-default-model
+  config:
+    provider: session-tree-demo
+    model: scripted-demo
+- id: session-title-llm
+  disabled: true
+- insert:
+    - id: session-tree-demo
+      name: './demo.ts'

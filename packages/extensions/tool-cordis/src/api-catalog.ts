@@ -2510,6 +2510,25 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'sessionTree',
+    summary: 'A plugin-owned sidecar for trees whose ancestry lives in native Session headers.',
+    description: 'A plugin-owned sidecar for trees whose ancestry lives in native Session headers.',
+    methods: [
+      {
+        signature: '@Remote list(signal: AbortSignal): Promise<TreeSnapshot>',
+        description: 'Read ordinary Session cards, including cold Sessions and unannotated native forks. Cached previews require the same live Session and cursor, or the same persistence instance and durable revision. A source without a usable revision is read again.',
+        parameters: [{ name: 'signal', description: 'cancellation for persistence reads.' }],
+        returns: 'a forest whose parent ids always come from native Session headers.',
+      },
+      {
+        signature: '@Remote annotate(sessionId: SessionId, title: string, summary: string): Promise<TreeAnnotation>',
+        description: 'Rename the native Session and save its card summary without issuing a model request.',
+        parameters: [{ name: 'sessionId', description: 'an existing native Session.' }, { name: 'title', description: 'required native title, normalized by the Session Controller.' }, { name: 'summary', description: 'custom summary; empty selects the automatic excerpt.' }],
+        returns: 'the saved summary; the accepted title is read from the native Session.',
+      },
+    ],
+  },
+  {
     key: 'settings',
     summary: 'Project Config schemas into forms and own optional instance-level UI policy.',
     description: 'Project Config schemas into forms and own optional instance-level UI policy.',
@@ -7911,6 +7930,22 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'TranscriptionRequest',
     declaration: 'export interface TranscriptionRequest {\n    readonly audioBase64: string;\n    readonly providerId?: SpeechProviderId;\n    readonly language?: string;\n}',
+  },
+  {
+    name: 'TreeAnnotation',
+    declaration: 'export interface TreeAnnotation {\n    readonly summary: string;\n}',
+  },
+  {
+    name: 'TreeArtifact',
+    declaration: 'export type TreeArtifact = {\n    readonly kind: \'commit\' | \'pull-request\' | \'diagram\' | \'link\';\n    readonly label: string;\n    readonly content: string;\n    readonly seq: number;\n} | {\n    readonly kind: \'file\';\n    readonly label: string;\n    readonly content: string;\n    readonly seq: number;\n    readonly index: number;\n};',
+  },
+  {
+    name: 'TreeNode',
+    declaration: 'export interface TreeNode {\n    readonly sessionId: SessionId;\n    readonly parentId: SessionId | null;\n    readonly forkSeq: number | null;\n    readonly createdAt: number;\n    readonly title: string;\n    readonly summary: string;\n    readonly customSummary: string;\n    readonly messageCount: number;\n    readonly inheritedEventCount: number;\n    readonly lastSeq: number | null;\n    readonly running: boolean;\n    readonly artifacts: readonly TreeArtifact[];\n}',
+  },
+  {
+    name: 'TreeSnapshot',
+    declaration: 'export interface TreeSnapshot {\n    readonly nodes: readonly TreeNode[];\n}',
   },
   {
     name: 'TurnCompleteInput',

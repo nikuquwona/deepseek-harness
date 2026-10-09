@@ -1130,6 +1130,25 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-experimental-ptc-runtime-python -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-experimental-session-tree -->
+<a id="deepseek-aidsh-experimental-session-tree"></a>
+
+## `@deepseek-ai/dsh-experimental-session-tree`
+
+- `inject`: `storageDomain` · `sessionQuery` · `sessions` · `agents` · `sessionController`
+- `source`: [`packages/experimental/session-tree/src/index.ts:18`](../packages/experimental/session-tree/src/index.ts)
+
+```ts config-catalog
+/** Presentation limits; full Session data is owned by the native persistence service. */
+export interface Config {
+  /** Maximum Unicode code points in an automatic card summary. */
+  readonly summaryLength: number
+  /** Maximum recent artifacts returned for each conversation card. */
+  readonly artifactLimit: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-experimental-session-tree -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-experimental-speech-to-text -->
 <a id="deepseek-aidsh-experimental-speech-to-text"></a>
 
@@ -4415,6 +4434,7 @@ export interface Config {
 | `@deepseek-ai/dsh-experimental-auto-review` | `approval` · `llm` · `permissionPresets` · `sessions` · `tools` | [`packages/experimental/auto-review/src/index.ts`](../packages/experimental/auto-review/src/index.ts) |
 | `@deepseek-ai/dsh-experimental-client-ui-agent-team` | — | [`packages/experimental/client-ui-agent-team/src/index.ts`](../packages/experimental/client-ui-agent-team/src/index.ts) |
 | `@deepseek-ai/dsh-experimental-client-ui-claude-code-mods` | — | [`packages/experimental/client-ui-claude-code-mods/src/index.ts`](../packages/experimental/client-ui-claude-code-mods/src/index.ts) |
+| `@deepseek-ai/dsh-experimental-client-ui-session-tree` | — | [`packages/experimental/client-ui-session-tree/src/index.ts`](../packages/experimental/client-ui-session-tree/src/index.ts) |
 | `@deepseek-ai/dsh-experimental-client-ui-voice-input` | — | [`packages/experimental/client-ui-voice-input/src/index.ts`](../packages/experimental/client-ui-voice-input/src/index.ts) |
 | `@deepseek-ai/dsh-experimental-computer-use-cua-driver-native` | `computerUse` · `tools` · `systemPrompt` | [`packages/experimental/computer-use-cua-driver-native/src/index.ts`](../packages/experimental/computer-use-cua-driver-native/src/index.ts) |
 | `@deepseek-ai/dsh-experimental-session-inspector` | — | [`packages/experimental/session-inspector/src/index.ts`](../packages/experimental/session-inspector/src/index.ts) |

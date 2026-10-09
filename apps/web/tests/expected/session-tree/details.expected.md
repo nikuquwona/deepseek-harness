@@ -1,0 +1,15 @@
+- dialog "Explore the delivery plan":
+  - heading "Explore the delivery plan" [level=2]
+  - button "Close details"
+  - paragraph: "Delivery plan ready. PR reference: https://github.com/example/project/pull/17"
+  - heading "Results and references" [level=3]
+  - text: Presented file · Delivery report
+  - paragraph: report.txt
+  - button "View file in conversation"
+  - text: Diagram preview · Mermaid
+  - img "Diagram preview"
+  - text: PR reference · project/pull/17
+  - link "https://github.com/example/project/pull/17":
+    - /url: https://github.com/example/project/pull/17
+  - button "Edit card"
+  - button "Open conversation"
