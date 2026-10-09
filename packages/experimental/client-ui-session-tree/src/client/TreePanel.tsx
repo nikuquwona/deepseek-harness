@@ -193,7 +193,7 @@ export function TreePanel(props: TreePanelProps) {
         {state.tree.nodes.length === 0 ? <div className={css.empty}>
           {state.loading ? <span role="status" aria-label={t('loading')}><StateDot state="ongoing" size={24} /></span>
             : <><IconBranchOutlineRegular size={32} /><h2>{t('empty')}</h2><p>{t('emptyBody')}</p></>}
-        </div> : <div className={clsx(css.world, view.zoom < 0.55 && css.overview)} style={{
+        </div> : <div className={clsx(css.world, view.zoom < 0.75 && css.overview)} style={{
           '--tree-x': `${view.x}px`, '--tree-y': `${view.y}px`, '--tree-zoom': view.zoom,
           '--tree-title-lines': Math.max(1,Math.min(4,Math.floor((CARD.height * view.zoom - 12) / 16.2))),
         } as LocalStyle}>
